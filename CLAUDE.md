@@ -33,6 +33,7 @@ See `docs/ROADMAP.md` for the full phase breakdown.
 | Backend | FastAPI (Python) | async, typed, auto Swagger docs |
 | ORM / migrations | SQLAlchemy + Alembic | never edit schema manually, always migrate |
 | Database | PostgreSQL + `pgvector` extension | embeddings stored natively, no ad-hoc numpy storage |
+| Vector column type | `pgvector` (Python package) | SQLAlchemy binding for the `pgvector` Postgres extension |
 | Embeddings | `sentence-transformers` (multilingual model) | local, no paid external API |
 | Frontend | React + TypeScript + Vite | strict TS mode |
 | Styling | Tailwind CSS | no scattered custom CSS |

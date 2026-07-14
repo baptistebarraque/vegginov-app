@@ -1,10 +1,9 @@
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import engine_from_config, pool
 
+import veggie_app.models  # noqa: F401 — registers tables on Base.metadata
 from alembic import context
-
 from veggie_app.config import settings
 from veggie_app.database import Base
 
