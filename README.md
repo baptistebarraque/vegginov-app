@@ -20,8 +20,9 @@ User-facing UI text is currently in French.
 ## Current status
 
 **Phase 1 — POC.** User submits a recipe, the app returns 4 similar
-vegetarian recipes (the similarity is yet to define). An admin can add vegetarian
-recipes via a CLI script.
+vegetarian recipes (the similarity is yet to define). An admin can add
+vegetarian recipes via a CLI script, or by logging into the admin web
+interface.
 
 ---
 
@@ -30,7 +31,8 @@ recipes via a CLI script.
 - **Backend**: FastAPI, SQLAlchemy, Alembic
 - **Database**: PostgreSQL (`pgvector` extension for embeddings)
 - **Similarity**: `sentence-transformers` (multilingual model)
-- **Frontend**: React + TypeScript + Vite, Tailwind CSS
+- **Admin auth**: `bcrypt` password hashing, server-side sessions (httpOnly cookie)
+- **Frontend**: React + TypeScript + Vite, `react-router`, Tailwind CSS
 - **Environment**: Docker / docker-compose
 - **Quality**: ruff (lint), pytest / vitest (tests), GitHub Actions (CI)
 
@@ -93,14 +95,23 @@ The frontend is available at `http://localhost:5173`.
 
 ## Adding a vegetarian recipe (admin)
 
-In phase 1, recipes are added through a CLI script:
+Recipes can be added two ways:
 
-```bash
-docker-compose exec backend uv run python -m veggie_app.admin.add_recipe_cli
-```
+- **CLI script**, prompts for a title, ingredients, and optional tags
+  (allergens, prep time...); the embedding is generated and stored
+  automatically:
 
-The script prompts for a title, ingredients, and optional tags (allergens,
-prep time...). The embedding is generated and stored automatically.
+  ```bash
+  docker-compose exec backend uv run python -m veggie_app.admin.add_recipe_cli
+  ```
+
+- **Admin web interface**, at `/admin/login` on the frontend. Requires an
+  admin account, created once via CLI (`getpass`-prompted, so the password
+  never touches this terminal's scrollback):
+
+  ```bash
+  docker-compose exec backend uv run python -m veggie_app.admin.create_admin_cli
+  ```
 
 ---
 

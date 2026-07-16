@@ -21,7 +21,9 @@ awareness page.
 **Phase 1 — POC.**
 Scope: user submits a recipe title (+ ingredients) → API returns 4 similar
 vegetarian recipes using embedding similarity (no nutritional scoring yet).
-Admin (the project owner) adds vegetarian recipes via a CLI script.
+Admin (the project owner) adds vegetarian recipes via a CLI script, or via
+the admin web interface after logging in (session-cookie auth; see the
+"Admin auth" architecture entry in `docs/ARCHITECTURE.md`).
  
 Do not implement features from later phases unless explicitly requested.
 See `docs/ROADMAP.md` for the full phase breakdown.
@@ -35,7 +37,9 @@ See `docs/ROADMAP.md` for the full phase breakdown.
 | Database | PostgreSQL + `pgvector` extension | embeddings stored natively, no ad-hoc numpy storage |
 | Vector column type | `pgvector` (Python package) | SQLAlchemy binding for the `pgvector` Postgres extension |
 | Embeddings | `sentence-transformers` (multilingual model) | local, no paid external API |
+| Password hashing | `bcrypt` | industry-standard adaptive hashing for admin credentials |
 | Frontend | React + TypeScript + Vite | strict TS mode |
+| Routing | `react-router` | needed once the app has more than one page (admin login/upload) |
 | Styling | Tailwind CSS | no scattered custom CSS |
 | Containerization | Docker + docker-compose | reproducible env from day one |
 | Python deps | `uv` + `pyproject.toml` | |
@@ -66,19 +70,24 @@ veggie-app/
 │       ├── database.py                # engine, session, get_db dependency
 │       ├── models/                    # SQLAlchemy tables only
 │       │   ├── recipe.py
-│       │   └── user.py                # scaffolded, unused in phase 1
+│       │   ├── user.py                # admin login now; general accounts in phase 4
+│       │   └── admin_session.py        # opaque session tokens (hashed at rest)
 │       ├── schemas/                    # Pydantic request/response models only
-│       │   └── recipe.py
+│       │   ├── recipe.py
+│       │   └── auth.py
 │       ├── matching/                   # pure similarity logic, no FastAPI/DB deps
 │       │   ├── embeddings.py
 │       │   └── similarity.py
 │       ├── services/                   # business logic / orchestration
-│       │   └── recipe_service.py
+│       │   ├── recipe_service.py
+│       │   └── auth_service.py
 │       ├── api/routes/                 # thin routes only
 │       │   ├── suggestions.py          # POST /suggestions
-│       │   └── admin_recipes.py
+│       │   ├── auth.py                 # /auth/login, /auth/logout, /auth/me
+│       │   └── admin_recipes.py        # POST /admin/recipes (admin-only)
 │       └── admin/
-│           └── add_recipe_cli.py
+│           ├── add_recipe_cli.py
+│           └── create_admin_cli.py
 │   ├── tests/
 │   └── scripts/seed_db.py
 ├── frontend/
@@ -127,6 +136,7 @@ uv run ruff check .
 uv run alembic revision --autogenerate -m "description"
 uv run alembic upgrade head
 uv run python -m veggie_app.admin.add_recipe_cli
+uv run python -m veggie_app.admin.create_admin_cli
  
 # Frontend
 cd frontend

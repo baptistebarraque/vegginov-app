@@ -9,19 +9,35 @@ from collections.abc import Generator
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from veggie_app.database import engine, get_db
 from veggie_app.main import app
+from veggie_app.models.admin_session import AdminSession
+from veggie_app.models.recipe import Recipe
+from veggie_app.models.user import User
 
 
 @pytest.fixture()
 def db_session() -> Generator[Session, None, None]:
     """A DB session wrapped in a transaction that is rolled back after the
-    test, so tests never leave rows behind in the dev database."""
+    test, so tests never leave rows behind in the dev database.
+
+    Also clears these tables at the start, within this same rolled-back
+    transaction: the dev DB accumulates real recipes/admins through normal
+    use of the app (CLI, admin UI), and tests need a known-empty starting
+    point. Real data is untouched since nothing here is ever committed —
+    see the rollback below.
+    """
     connection = engine.connect()
     transaction = connection.begin()
     session = Session(bind=connection)
+
+    session.execute(delete(AdminSession))
+    session.execute(delete(User))
+    session.execute(delete(Recipe))
+    session.flush()
 
     yield session
 

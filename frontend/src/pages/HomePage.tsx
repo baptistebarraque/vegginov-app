@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router";
 import { fetchSuggestions } from "../api/suggestions";
 import RecipeForm from "../components/RecipeForm";
 import SuggestionList from "../components/SuggestionList";
@@ -25,7 +26,14 @@ function HomePage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center gap-6 bg-white px-4 py-12 dark:bg-neutral-900">
+    <main className="relative flex min-h-screen flex-col items-center gap-6 bg-white px-4 py-12 dark:bg-neutral-900">
+      <Link
+        to="/admin/login"
+        className="absolute top-4 right-4 text-sm text-neutral-500 underline hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+      >
+        Espace admin
+      </Link>
+
       <div className="flex flex-col items-center gap-2 text-center">
         <h1 className="text-3xl font-semibold text-green-800 dark:text-green-400">Veggie App</h1>
         <p className="text-neutral-600 dark:text-neutral-300">
