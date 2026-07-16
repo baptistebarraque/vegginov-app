@@ -1,4 +1,4 @@
-"""Business logic for generating recipe suggestions."""
+"""Business logic for recipe suggestions and admin recipe creation."""
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -9,6 +9,26 @@ from veggie_app.models.recipe import Recipe
 from veggie_app.schemas.recipe import RecipeSuggestion
 
 SUGGESTION_COUNT = 4
+
+
+def create_recipe(
+    db: Session,
+    title: str,
+    ingredients: list[str],
+    allergens: list[str] | None = None,
+    prep_time_minutes: int | None = None,
+) -> Recipe:
+    embedding = embed_text(build_query_text(title, ingredients))
+    recipe = Recipe(
+        title=title,
+        ingredients=ingredients,
+        allergens=allergens or [],
+        prep_time_minutes=prep_time_minutes,
+        embedding=embedding,
+    )
+    db.add(recipe)
+    db.flush()
+    return recipe
 
 
 def get_suggestions(db: Session, title: str, ingredients: list[str]) -> list[RecipeSuggestion]:

@@ -42,3 +42,28 @@ def test_get_suggestions_caps_at_suggestion_count(db_session: Session) -> None:
     suggestions = recipe_service.get_suggestions(db_session, "query", [])
 
     assert len(suggestions) == recipe_service.SUGGESTION_COUNT
+
+
+def test_create_recipe_persists_with_embedding(db_session: Session) -> None:
+    recipe = recipe_service.create_recipe(
+        db_session,
+        title="Curry de lentilles",
+        ingredients=["lentilles", "curry"],
+        allergens=["gluten"],
+        prep_time_minutes=30,
+    )
+
+    fetched = db_session.get(Recipe, recipe.id)
+    assert fetched is not None
+    assert fetched.title == "Curry de lentilles"
+    assert fetched.ingredients == ["lentilles", "curry"]
+    assert fetched.allergens == ["gluten"]
+    assert fetched.prep_time_minutes == 30
+    assert list(fetched.embedding) == _unit_vector(0)
+
+
+def test_create_recipe_defaults_allergens_to_empty_list(db_session: Session) -> None:
+    recipe = recipe_service.create_recipe(db_session, title="Salade", ingredients=["laitue"])
+
+    assert recipe.allergens == []
+    assert recipe.prep_time_minutes is None

@@ -11,6 +11,8 @@ dependencies = [
     "psycopg[binary]>=3.2",
     "pydantic-settings>=2.6",
     "pgvector>=0.3",
+    "sentence-transformers>=3.0",
+    "torch>=2.0",
 ]
 
 [build-system]
@@ -19,6 +21,21 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/veggie_app"]
+
+# torch (needed only as a dependency of sentence-transformers) is pinned to
+# PyTorch's CPU-only wheel index on every platform: this app never runs on a
+# GPU, but the default index resolves a CUDA build (with several GB of
+# nvidia-* packages) on Linux, which is what both the backend Docker image
+# and CI run on. torch must stay listed as a direct dependency above for uv
+# to actually honor this override — as a purely transitive dependency, uv
+# silently ignores tool.uv.sources and resolves it from the default index.
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [dependency-groups]
 dev = [

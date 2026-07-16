@@ -31,3 +31,29 @@ Alternatives considered: `distiluse-base-multilingual-cased-v2` (512-dim)
 and `paraphrase-multilingual-mpnet-base-v2` (768-dim) — both higher quality
 but slower and heavier; not justified before the POC needs to prove out
 similarity quality first.
+
+---
+
+## torch pinned to the CPU-only wheel index
+
+Date: 2026-07-15
+Context: wiring in real `sentence-transformers` embeddings (Step 10) pulls
+in `torch` as a dependency. On Linux — both the backend Docker image and
+GitHub Actions CI — the default PyPI resolution for `torch` is the
+CUDA-enabled build, adding ~2GB+ of unused `nvidia-*`/`cuda-*`/`triton`
+packages, since this app never runs on a GPU anywhere.
+Decision: pin `torch` to PyTorch's CPU-only wheel index via
+`[tool.uv.sources]` / `[[tool.uv.index]]` in `backend/pyproject.toml`, and
+keep `torch` listed as a *direct* dependency, not just transitive via
+`sentence-transformers`. This second part is required, not cosmetic: `uv`
+only honors a `tool.uv.sources` override for a package that appears as a
+direct dependency — left purely transitive, the override was silently
+ignored and `torch` still resolved the CUDA build with no warning. Verify
+with `grep -A15 'name = "torch"' backend/uv.lock`: it should show
+`source = { registry = "https://download.pytorch.org/whl/cpu" }` and no
+`nvidia-*`/`cuda-*`/`triton` dependencies.
+Alternatives considered: leaving `torch` transitive-only (rejected —
+silently pulls the CUDA build on Linux; caught when the backend Docker
+rebuild started downloading gigabytes of `nvidia-*` packages); accepting
+the CUDA build as-is (rejected — wasted disk/bandwidth/build time for a
+POC with no GPU usage anywhere, and the same cost would hit every CI run).
