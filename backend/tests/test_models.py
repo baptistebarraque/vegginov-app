@@ -9,9 +9,14 @@ from veggie_app.models.user import User
 
 def test_recipe_round_trip(db_session: Session) -> None:
     embedding = [0.1] * EMBEDDING_DIM
+    ingredients = [
+        {"name": "lentilles", "quantity": "200g"},
+        {"name": "lait de coco", "quantity": None},
+        {"name": "curry", "quantity": None},
+    ]
     recipe = Recipe(
         title="Curry de lentilles",
-        ingredients=["lentilles", "lait de coco", "curry"],
+        ingredients=ingredients,
         allergens=[],
         embedding=embedding,
     )
@@ -22,7 +27,7 @@ def test_recipe_round_trip(db_session: Session) -> None:
 
     assert fetched is not None
     assert fetched.title == "Curry de lentilles"
-    assert fetched.ingredients == ["lentilles", "lait de coco", "curry"]
+    assert fetched.ingredients == ingredients
     assert fetched.prep_time_minutes is None
     assert fetched.created_at is not None
     assert list(fetched.embedding) == embedding

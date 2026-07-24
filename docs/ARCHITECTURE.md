@@ -91,3 +91,165 @@ verifying services to matter, which this app doesn't have); a separate
 need its own separate table with no reuse of this work); full CSRF-token
 middleware (rejected as over-engineering at this scope, given `SameSite=Lax`
 already covers the main attack path).
+
+---
+
+## Recipe image storage: local disk, bind-mounted
+
+Date: 2026-07-24
+Context: the admin recipe form gained an optional image upload (alongside
+optional protein info and step-by-step instructions). Needed a place to
+store the file and a way to serve it back to the frontend, without adding
+a paid external dependency (same reasoning as the embeddings model choice).
+Decision: images are saved to `settings.upload_dir` (`backend/uploads/`,
+`services/image_service.py`), validated by extension (`.png`/`.jpg`/`.jpeg`)
+and a 5MB size cap, under a generated `uuid4` filename — the `Recipe` table
+stores only that filename (`image_filename`), never the original one.
+Served back via a FastAPI `StaticFiles` mount at `/media`. `docker-compose.yml`
+uses a **bind mount** (`./backend/uploads:/app/uploads`), not a named
+volume, so images saved by the Dockerized backend (web upload) and images
+saved by the CLI running locally via `uv run` (same relative `uploads`
+path, different physical process) land in the same place — a named volume
+would only be visible to the container, splitting the two admin entry
+points across two different storage locations. This only works because the
+deployment target is a VPS/self-hosted Docker host with a persistent disk,
+confirmed explicitly when this was designed; it would need to change to
+object storage (S3-compatible) if the target ever becomes a
+serverless/ephemeral-filesystem platform.
+Alternatives considered: base64-encoded bytes in the `recipes` row
+(rejected — bloats every row and every `/suggestions` query payload with
+image data that's only needed on the admin/recipe-detail path); cloud
+object storage (rejected for now — adds cost/complexity and an external
+dependency before the POC needs it; revisit if the deployment target
+changes).
+
+---
+
+## Bulk recipe import: CSV, all-or-nothing, semicolon sub-delimiter
+
+Date: 2026-07-24
+Context: adding recipes one at a time (CLI or the admin web form) doesn't
+scale once the admin has many recipes ready at once. Needed a bulk path
+without inventing a new file format or adding a parsing dependency.
+Decision:
+- **CSV via the admin web UI** (`POST /admin/recipes/import`, admin-only,
+  same session auth as the single-recipe route), not a CLI script — the
+  admin already has a point-and-click web upload flow; bulk import extends
+  that instead of adding a second, inconsistent entry point. Parsing uses
+  Python's stdlib `csv` module — no new dependency.
+- **Columns** mirror the single-recipe fields exactly: `title`,
+  `ingredients` (required), `allergens`, `prep_time_minutes`, `servings`,
+  `protein_source`, `protein_grams`, `instructions` (optional). No image
+  column — a CSV cell can't hold binary image data; images stay a
+  per-recipe follow-up via the existing single-recipe form.
+- **List-valued cells** (`ingredients`/`allergens`/`instructions`) use a
+  **semicolon** as the in-cell delimiter (e.g. `lentilles corail; lait de
+  coco; curry`), since commas are already the CSV column separator.
+- **All-or-nothing**: every row is validated (`recipe_import_service.
+  parse_csv`) *before* any database write. If any row is invalid, nothing
+  is imported and every invalid row's error is returned (not just the
+  first), so the admin fixes the CSV once and re-uploads, instead of
+  ending up with a partially-imported batch that's hard to dedupe on
+  retry. Enforced structurally, not by a manual rollback: parsing is a
+  pure function with no DB access, and the route only calls `db.commit()`
+  once, after every row's `recipe_service.create_recipe` call has
+  succeeded — an exception anywhere in that loop propagates past the
+  commit, and `get_db`'s `session.close()` discards the uncommitted work.
+Alternatives considered: best-effort import (commit valid rows, report
+failures) — rejected because fixing errors and re-uploading the same file
+would re-create the rows that already succeeded, with no natural
+duplicate-detection to fall back on at this POC stage; a separate CLI
+bulk-import command — rejected for now, no immediate need beyond the web
+flow the admin already uses.
+
+---
+
+## Ingredients become structured {name, quantity}, required when servings is set
+
+Date: 2026-07-24
+Context: a recipe that states "serves 4" is only useful if each ingredient
+also says how much of it is needed at that serving size — plain ingredient
+names (the original `ARRAY(String)` column) can't carry that.
+Decision:
+- `recipes.ingredients` changed from `text[]` to a `json` column of
+  `{"name": str, "quantity": str | None}` objects (`IngredientEntry` in
+  `models/recipe.py`, `IngredientEntrySchema` in `schemas/recipe.py`).
+  Quantity is a free-text string (`"200g"`, `"1 c.a.s"`, `"20cl"`...), not
+  a numeric amount + unit enum — recipe quantities don't share one unit
+  system, and forcing one would either reject valid input or need an
+  unbounded unit list.
+- Migration `be16d5b1145d` converts existing rows in place (`UPDATE ...
+  json_agg(json_build_object(...))` over the old array), setting
+  `quantity: null` for every pre-existing ingredient rather than dropping
+  or guessing at the data.
+- **Enforcement lives in one place**: `recipe_service.
+  validate_ingredient_quantities(ingredients, servings)` raises
+  `IngredientQuantityError` if `servings` is set and any ingredient has no
+  quantity; every entry point (`create_recipe` itself, plus
+  `recipe_import_service._parse_row` for CSV rows) calls it, so the rule
+  can't be bypassed by adding a new admin entry point later without also
+  wiring this in. When `servings` is left blank, quantity stays fully
+  optional, matching the CSV/CLI's existing "optional fields can be
+  skipped" convention.
+- **Wire format**: the admin route's `ingredients` field switched from
+  repeated multipart form fields (one per name) to a single JSON-encoded
+  string field, validated with `pydantic.TypeAdapter(list
+  [IngredientEntrySchema])` — multipart's flat key-value fields can't
+  express `{name, quantity}` pairs as a repeated list the way plain
+  strings (allergens/instructions) can. The CSV format instead extends the
+  existing semicolon-separated cell with a second delimiter: `riz:200g;
+  curry` (colon between name and quantity, quantity optional per item).
+- The public `/suggestions` endpoint and `RecipeSuggestion.ingredients`
+  are unaffected (still plain `list[str]`) — quantity is an admin/creation
+  concern, not something end users searching for suggestions submit or
+  need to see.
+Alternatives considered: inline free-text ("200g de riz" as the whole
+ingredient string, no schema change) — rejected because quantity
+wouldn't be a separately usable field (e.g. for a future "scale this
+recipe" feature); numeric amount + fixed unit dropdown — rejected, see
+above; validating in the API route instead of `recipe_service` — rejected
+because the CLI and CSV import don't go through the route, and the rule
+needs to hold for every way a recipe gets created.
+
+---
+
+## Admin recipe list/detail/edit/delete
+
+Date: 2026-07-24
+Context: closing out the last Phase 1 item — the admin needed a way to see
+every recipe, open one, edit it, and delete it, not just add new ones.
+Decision:
+- `GET /admin/recipes` (title + thumbnail only, `RecipeListItem`) and
+  `GET /admin/recipes/{id}` (full detail, `RecipeResponse`) added alongside
+  the existing `POST`. `PUT /admin/recipes/{id}` and
+  `DELETE /admin/recipes/{id}` round out the CRUD set — all admin-only,
+  same session auth as every other `/admin/*` route.
+- `CreateRecipeResponse` renamed to `RecipeResponse`: once `GET`/`PUT` also
+  return this exact shape, a name starting with "Create" would be actively
+  misleading, not just imprecise.
+- **Update always recomputes the embedding** from the (possibly changed)
+  title/ingredient names — an edited recipe with a stale embedding would
+  quietly stop matching what it should in `/suggestions`. Both `create_
+  recipe` and `update_recipe` go through the same `_prepare_embedding`
+  helper (validates quantities, then embeds) so this can't drift between
+  the two code paths.
+- **Image lifecycle on edit/delete**: replacing an image deletes the old
+  file (`image_service.delete_recipe_image`) after the new one saves
+  successfully, not before — an upload failure leaves the original image
+  intact instead of the recipe briefly having none. A `remove_image` form
+  flag lets the admin clear an image without uploading a replacement.
+  Deleting a recipe deletes its image file too, so `backend/uploads/`
+  doesn't accumulate orphaned files with no owning row.
+- **Frontend**: `AdminRecipeForm` gained optional `initialValues`/
+  `existingImageUrl`/`submitLabel`/`loadingLabel` props so the same form
+  drives both "add" (`AdminUploadPage`) and "edit" (`AdminRecipeDetailPage`)
+  — one validation/UX implementation, not two. `onSubmit` gained a second
+  `removeExistingImage` argument the create flow simply ignores (TS allows
+  a callback with fewer declared params than the type expects).
+Alternatives considered: a single `RecipeResponse`-shaped list endpoint
+(rejected — sends every recipe's full ingredients/instructions just to
+render a title list, wasted payload as the recipe count grows); deleting
+the old image file before saving the new one (rejected — a failed upload
+would leave the recipe with no image at all instead of keeping the
+original); a separate edit-only form component (rejected — would duplicate
+every field and the quantity-required-with-servings UX rule).

@@ -113,6 +113,19 @@ Recipes can be added two ways:
   docker-compose exec backend uv run python -m veggie_app.admin.create_admin_cli
   ```
 
+  The same admin page also has a **CSV import** section for adding many
+  recipes at once — columns match the single-recipe fields (`title`,
+  `ingredients` required; `allergens`, `prep_time_minutes`, `servings`,
+  `protein_source`, `protein_grams`, `instructions` optional), with
+  multi-value cells separated by `;`. Each ingredient can carry a quantity
+  after a colon, e.g. `riz:200g; curry` — **required** for every ingredient
+  once `servings` is filled in. A downloadable template is linked from
+  that page. The whole file is validated before anything is imported —
+  one bad row reports every error and imports nothing.
+
+  From `/admin/recipes`, the admin can see every recipe (title +
+  thumbnail), and open one to edit any field or delete it entirely.
+
 ---
 
 ## Tests and code quality

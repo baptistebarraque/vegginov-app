@@ -18,22 +18,26 @@ CI (lint + tests on every push). No product features yet.
   script (`admin/add_recipe_cli.py`); embeddings generated and stored
   automatically.
 - No user accounts, no filters, no ratings.
+- Admin (project owner) can see the list of every recipe with the title, and with some ux he can click on it and see the details, and also edit it (modify details, title, delete, etc)
 
 ## Phase 2 — Simple filters
 
+
+- First implementation of the similarity search.
 - Allergy / gluten / dietary-restriction filters applied on top of the
   similarity search.
-- Basic rating mechanism (structure TBD).
-
-## Phase 3 — Combined scoring
-
 - Ranking becomes a combined score: embedding similarity + nutritional
-  equivalence (calories, protein, etc.), not similarity alone.
+  equivalence (calories, protein, etc.), not similarity alone, could for instance use knowns replacement for meats (tofu, seitan, tsp,..)
+
+
+## Phase 3 — Combined scoring + frontend amelioration
+
+
+- Improving the frontend with cool animations using anime.js, with 3d animations and cool ui tools.
 
 ## Phase 4 — User accounts
 
-- Optional user accounts.
-- Favorite recipes.
+- Optional user accounts, allowing to save personal allergens, diet preferences, favorite recipes.
 
 ## Phase 5 — Content and engagement
 

@@ -23,7 +23,9 @@ Scope: user submits a recipe title (+ ingredients) → API returns 4 similar
 vegetarian recipes using embedding similarity (no nutritional scoring yet).
 Admin (the project owner) adds vegetarian recipes via a CLI script, or via
 the admin web interface after logging in (session-cookie auth; see the
-"Admin auth" architecture entry in `docs/ARCHITECTURE.md`).
+"Admin auth" architecture entry in `docs/ARCHITECTURE.md`), one at a time
+or in bulk via CSV import. The admin can also list every recipe, and view,
+edit, or delete any of them from the web interface.
  
 Do not implement features from later phases unless explicitly requested.
 See `docs/ROADMAP.md` for the full phase breakdown.
@@ -38,6 +40,8 @@ See `docs/ROADMAP.md` for the full phase breakdown.
 | Vector column type | `pgvector` (Python package) | SQLAlchemy binding for the `pgvector` Postgres extension |
 | Embeddings | `sentence-transformers` (multilingual model) | local, no paid external API |
 | Password hashing | `bcrypt` | industry-standard adaptive hashing for admin credentials |
+| Multipart form parsing | `python-multipart` | required by FastAPI's `Form`/`UploadFile` — the admin recipe endpoint needs multipart to accept an optional image alongside text fields |
+| Recipe image storage | local disk (`backend/uploads/`, bind-mounted, served via FastAPI `StaticFiles`) | no external/paid storage service; works for the planned VPS/self-hosted deployment target |
 | Frontend | React + TypeScript + Vite | strict TS mode |
 | Routing | `react-router` | needed once the app has more than one page (admin login/upload) |
 | Styling | Tailwind CSS | no scattered custom CSS |
@@ -84,7 +88,7 @@ veggie-app/
 │       ├── api/routes/                 # thin routes only
 │       │   ├── suggestions.py          # POST /suggestions
 │       │   ├── auth.py                 # /auth/login, /auth/logout, /auth/me
-│       │   └── admin_recipes.py        # POST /admin/recipes (admin-only)
+│       │   └── admin_recipes.py        # /admin/recipes CRUD + /import (admin-only)
 │       └── admin/
 │           ├── add_recipe_cli.py
 │           └── create_admin_cli.py

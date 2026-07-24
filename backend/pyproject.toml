@@ -14,6 +14,7 @@ dependencies = [
     "sentence-transformers>=3.0",
     "torch>=2.0",
     "bcrypt>=4.0",
+    "python-multipart>=0.0.12",
 ]
 
 [build-system]
@@ -57,7 +58,7 @@ select = ["E", "F", "I", "UP", "B"]
 "alembic/versions/*.py" = ["E501"]
 
 [tool.ruff.lint.flake8-bugbear]
-# FastAPI's dependency-injection idiom is Depends(...) as a default value;
-# that's the intended usage, not the mutable-default-argument bug B008
-# guards against.
-extend-immutable-calls = ["fastapi.Depends"]
+# FastAPI's dependency-injection idiom is Depends(...)/Form(...)/File(...) as
+# a default value; that's the intended usage, not the mutable-default-argument
+# bug B008 guards against.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Form", "fastapi.File"]

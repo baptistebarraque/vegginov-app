@@ -27,6 +27,12 @@ services:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
     ports:
       - "${BACKEND_PORT}:8000"
+    volumes:
+      # Bind mount (not a named volume) so recipe images are visible in the
+      # same place whether they're saved by this container or by the CLI
+      # running locally (`uv run python -m veggie_app.admin.add_recipe_cli`),
+      # since both write to the same `settings.upload_dir` relative path.
+      - ./backend/uploads:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy

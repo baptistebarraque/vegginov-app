@@ -1,5 +1,7 @@
 """Typed application settings, loaded from environment variables / .env."""
 
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,6 +13,11 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file="../.env", extra="ignore")
 
     database_url: str
+    # Relative to cwd: `backend/uploads` when run locally (`cd backend` first,
+    # per CLAUDE.md), `/app/uploads` in Docker (WORKDIR is /app). Same
+    # relative path in both cases keeps the CLI and web upload path writing
+    # to the same place — see docker-compose.yml's bind mount for this dir.
+    upload_dir: Path = Path("uploads")
 
 
 settings = Settings()

@@ -9,7 +9,10 @@ def test_post_suggestions_returns_matching_recipes(client: TestClient, db_sessio
     db_session.add(
         Recipe(
             title="Curry de lentilles",
-            ingredients=["lentilles", "curry"],
+            ingredients=[
+                {"name": "lentilles", "quantity": None},
+                {"name": "curry", "quantity": None},
+            ],
             allergens=[],
             embedding=[0.1] * EMBEDDING_DIM,
         )
@@ -24,6 +27,7 @@ def test_post_suggestions_returns_matching_recipes(client: TestClient, db_sessio
     body = response.json()
     assert len(body["suggestions"]) == 1
     assert body["suggestions"][0]["title"] == "Curry de lentilles"
+    assert body["suggestions"][0]["ingredients"] == ["lentilles", "curry"]
 
 
 def test_post_suggestions_empty_db_returns_empty_list(client: TestClient) -> None:
