@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { login } from "../api/auth";
 
 function AdminLoginPage() {
@@ -28,7 +28,14 @@ function AdminLoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center gap-6 bg-white px-4 py-12 dark:bg-neutral-900">
+    <main className="relative flex min-h-screen flex-col items-center gap-6 bg-white px-4 py-12 dark:bg-neutral-900">
+      <Link
+        to="/"
+        className="absolute top-4 left-4 text-sm text-neutral-500 underline hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+      >
+        Retour à l'accueil
+      </Link>
+
       <div className="flex flex-col items-center gap-2 text-center">
         <h1 className="text-3xl font-semibold text-green-800 dark:text-green-400">
           Connexion admin
