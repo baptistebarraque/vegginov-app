@@ -1,8 +1,15 @@
 export interface RecipeSuggestion {
   id: number;
   title: string;
-  ingredients: string[];
+  ingredients: IngredientEntry[];
   score: number;
+  allergens: string[];
+  prep_time_minutes: number | null;
+  servings: number | null;
+  protein_source: string | null;
+  protein_grams: number | null;
+  instructions: string[];
+  image_url: string | null;
 }
 
 export interface SuggestionResponse {

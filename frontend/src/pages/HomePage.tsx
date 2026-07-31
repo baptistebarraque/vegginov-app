@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { fetchSuggestions } from "../api/suggestions";
 import RecipeForm from "../components/RecipeForm";
-import SuggestionList from "../components/SuggestionList";
+import RecipeSuggestionGrid from "../components/RecipeSuggestionGrid";
 import type { RecipeSuggestion } from "../types/recipe";
 
 function HomePage() {
@@ -49,7 +49,7 @@ function HomePage() {
         <p className="text-sm text-neutral-500 dark:text-neutral-400">Aucune suggestion trouvée.</p>
       )}
 
-      <SuggestionList suggestions={suggestions} />
+      <RecipeSuggestionGrid suggestions={suggestions} />
     </main>
   );
 }
