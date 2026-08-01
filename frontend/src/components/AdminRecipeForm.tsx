@@ -1,4 +1,7 @@
+import { X } from "lucide-react";
 import { useState, type FormEvent } from "react";
+import ProteinSourceCombobox from "./ProteinSourceCombobox";
+import { Button } from "./ui/Button";
 import type { RecipeFormValues } from "../types/recipe";
 
 interface AdminRecipeFormProps {
@@ -9,6 +12,9 @@ interface AdminRecipeFormProps {
   /** Full URL (already prefixed with the API base) of the recipe's current
    * image, if any — shown with a checkbox to remove it. Edit mode only. */
   existingImageUrl?: string | null;
+  /** Known protein_source vocabulary (see matching/substitution.py), fetched
+   * by the parent page — the combobox only ever commits one of these. */
+  proteinSourceOptions?: string[];
   submitLabel?: string;
   loadingLabel?: string;
 }
@@ -20,9 +26,9 @@ interface IngredientRow {
 
 const EMPTY_INGREDIENT_ROW: IngredientRow = { name: "", quantity: "" };
 
-const inputClassName =
-  "rounded border border-neutral-300 px-3 py-2 text-neutral-900 focus:border-green-600 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-white";
-const labelClassName = "flex flex-col gap-1 text-left text-sm text-neutral-700 dark:text-neutral-300";
+export const inputClassName =
+  "rounded-md border border-lisiere bg-feuille-haut px-3 py-2 text-craie focus:border-pousse focus:ring-2 focus:ring-pousse/25 focus:outline-none";
+export const labelClassName = "flex flex-col gap-1 text-left text-sm font-medium text-craie";
 
 function toIngredientRows(initialValues: RecipeFormValues | undefined): IngredientRow[] {
   if (!initialValues || initialValues.ingredients.length === 0) {
@@ -39,6 +45,7 @@ function AdminRecipeForm({
   isLoading,
   initialValues,
   existingImageUrl = null,
+  proteinSourceOptions = [],
   submitLabel = "Ajouter la recette",
   loadingLabel = "Ajout...",
 }: AdminRecipeFormProps) {
@@ -51,7 +58,9 @@ function AdminRecipeForm({
     initialValues?.prepTimeMinutes?.toString() ?? "",
   );
   const [servingsText, setServingsText] = useState(initialValues?.servings?.toString() ?? "");
-  const [proteinSource, setProteinSource] = useState(initialValues?.proteinSource ?? "");
+  const [proteinSource, setProteinSource] = useState<string | null>(
+    initialValues?.proteinSource ?? null,
+  );
   const [proteinGramsText, setProteinGramsText] = useState(
     initialValues?.proteinGrams?.toString() ?? "",
   );
@@ -107,7 +116,7 @@ function AdminRecipeForm({
         allergens,
         prepTimeMinutes,
         servings,
-        proteinSource: proteinSource.trim() || null,
+        proteinSource,
         proteinGrams,
         instructions,
         image,
@@ -117,7 +126,7 @@ function AdminRecipeForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex w-full max-w-md flex-col gap-3">
+    <form onSubmit={handleSubmit} className="flex w-full max-w-[640px] flex-col gap-4">
       <label className={labelClassName}>
         Nom de la recette
         <input
@@ -131,8 +140,14 @@ function AdminRecipeForm({
       </label>
 
       <div className="flex flex-col gap-2">
-        <span className="text-sm text-neutral-700 dark:text-neutral-300">
-          Ingrédients{quantityRequired && " (quantité obligatoire, le nombre de personnes est renseigné)"}
+        <span className="text-sm font-medium text-craie">
+          Ingrédients
+          {quantityRequired && (
+            <span className="text-sauge">
+              {" "}
+              (quantité obligatoire, le nombre de personnes est renseigné)
+            </span>
+          )}
         </span>
         {ingredientRows.map((row, index) => (
           <div key={index} className="flex gap-2">
@@ -157,9 +172,9 @@ function AdminRecipeForm({
                 type="button"
                 onClick={() => removeIngredientRow(index)}
                 aria-label={`Supprimer l'ingrédient ${index + 1}`}
-                className="text-neutral-500 hover:text-red-600 dark:text-neutral-400 dark:hover:text-red-400"
+                className="rounded-sm px-1 text-sauge transition-colors hover:text-brique focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pousse"
               >
-                ✕
+                <X className="size-4" aria-hidden="true" />
               </button>
             )}
           </div>
@@ -167,7 +182,7 @@ function AdminRecipeForm({
         <button
           type="button"
           onClick={addIngredientRow}
-          className="self-start text-sm text-green-700 underline hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
+          className="self-start rounded-sm text-sm font-medium text-pousse transition-colors hover:text-pousse-clair focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pousse"
         >
           + Ajouter un ingrédient
         </button>
@@ -205,16 +220,11 @@ function AdminRecipeForm({
           className={inputClassName}
         />
       </label>
-      <label className={labelClassName}>
-        Source de protéines (optionnel)
-        <input
-          type="text"
-          value={proteinSource}
-          onChange={(event) => setProteinSource(event.target.value)}
-          placeholder="lentilles corail"
-          className={inputClassName}
-        />
-      </label>
+      <ProteinSourceCombobox
+        value={proteinSource}
+        onChange={setProteinSource}
+        options={proteinSourceOptions}
+      />
       <label className={labelClassName}>
         Protéines en grammes (optionnel)
         <input
@@ -240,17 +250,18 @@ function AdminRecipeForm({
 
       {existingImageUrl !== null && !removeExistingImage && image === null && (
         <div className="flex flex-col gap-1">
-          <span className="text-sm text-neutral-700 dark:text-neutral-300">Photo actuelle</span>
+          <span className="text-sm font-medium text-craie">Photo actuelle</span>
           <img
             src={existingImageUrl}
             alt="Photo actuelle de la recette"
-            className="max-h-32 rounded"
+            className="max-h-32 rounded-md border border-lisiere"
           />
-          <label className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300">
+          <label className="flex items-center gap-2 text-sm text-sauge">
             <input
               type="checkbox"
               checked={removeExistingImage}
               onChange={(event) => setRemoveExistingImage(event.target.checked)}
+              className="accent-pousse"
             />
             Supprimer la photo actuelle
           </label>
@@ -266,13 +277,9 @@ function AdminRecipeForm({
         />
       </label>
 
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="rounded bg-green-700 px-4 py-2 font-medium text-white transition hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-60"
-      >
+      <Button type="submit" size="lg" loading={isLoading} className="self-start">
         {isLoading ? loadingLabel : submitLabel}
-      </button>
+      </Button>
     </form>
   );
 }

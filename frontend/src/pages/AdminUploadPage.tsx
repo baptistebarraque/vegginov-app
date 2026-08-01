@@ -1,15 +1,28 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { CsvImportValidationError, createRecipe, importRecipesCsv } from "../api/adminRecipes";
+import {
+  CsvImportValidationError,
+  createRecipe,
+  getProteinSourceOptions,
+  importRecipesCsv,
+} from "../api/adminRecipes";
 import { getCurrentAdmin, logout } from "../api/auth";
 import AdminCsvImportForm from "../components/AdminCsvImportForm";
 import AdminRecipeForm from "../components/AdminRecipeForm";
+import { AppShell } from "../components/AppShell";
+import { Header } from "../components/Header";
+import { Alert } from "../components/ui/Alert";
+import { Button } from "../components/ui/Button";
+import { Eyebrow } from "../components/ui/Eyebrow";
 import type { AdminUser } from "../types/auth";
 import type { CsvImportRowError, RecipeFormValues } from "../types/recipe";
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 function AdminUploadPage() {
   const [admin, setAdmin] = useState<AdminUser | null>(null);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
+  const [proteinSourceOptions, setProteinSourceOptions] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -30,6 +43,15 @@ function AdminUploadPage() {
       }
     });
   }, [navigate]);
+
+  useEffect(() => {
+    if (admin === null) {
+      return;
+    }
+    getProteinSourceOptions()
+      .then(setProteinSourceOptions)
+      .catch(() => setProteinSourceOptions([]));
+  }, [admin]);
 
   async function handleSubmit(values: RecipeFormValues) {
     setIsSubmitting(true);
@@ -77,86 +99,101 @@ function AdminUploadPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center gap-6 bg-white px-4 py-12 dark:bg-neutral-900">
-      <div className="flex w-full max-w-md items-center justify-between">
-        <h1 className="text-3xl font-semibold text-green-800 dark:text-green-400">
-          Ajouter une recette
-        </h1>
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="text-sm text-neutral-500 underline hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
-        >
-          Déconnexion
-        </button>
-      </div>
-      <p className="text-neutral-600 dark:text-neutral-300">Connecté en tant que {admin.email}</p>
-      <Link
-        to="/admin/recipes"
-        className="self-start text-sm text-green-700 underline hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
-      >
-        Voir toutes les recettes
-      </Link>
+    <AppShell>
+      <Header
+        section="Ajouter"
+        actions={
+          <Button variant="ghost" size="sm" onClick={handleLogout}>
+            Se déconnecter
+          </Button>
+        }
+      />
 
-      <AdminRecipeForm onSubmit={handleSubmit} isLoading={isSubmitting} />
-
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-      {successMessage && (
-        <div className="flex flex-col items-center gap-2">
-          <p className="text-sm text-green-700 dark:text-green-400">{successMessage}</p>
-          {createdImageUrl && (
-            <img
-              src={`${import.meta.env.VITE_API_BASE_URL}${createdImageUrl}`}
-              alt="Photo de la recette ajoutée"
-              className="max-h-48 rounded shadow"
-            />
-          )}
+      <main className="pb-24">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="font-display text-3xl text-craie">Ajouter une recette</h1>
+            <p className="mt-1 text-sm text-sauge">Connecté en tant que {admin.email}</p>
+          </div>
+          <Link
+            to="/admin/recipes"
+            className="text-sm text-pousse transition-colors hover:text-pousse-clair focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pousse"
+          >
+            Voir toutes les recettes
+          </Link>
         </div>
-      )}
 
-      <hr className="w-full max-w-md border-neutral-300 dark:border-neutral-700" />
+        <div className="mt-8">
+          <AdminRecipeForm
+            onSubmit={handleSubmit}
+            isLoading={isSubmitting}
+            proteinSourceOptions={proteinSourceOptions}
+          />
+        </div>
 
-      <div className="flex w-full max-w-md flex-col items-start gap-3">
-        <h2 className="text-xl font-semibold text-green-800 dark:text-green-400">
-          Importer plusieurs recettes (CSV)
-        </h2>
-        <p className="text-sm text-neutral-600 dark:text-neutral-300">
-          Colonnes : <code>title</code>, <code>ingredients</code> (obligatoires),{" "}
-          <code>allergens</code>, <code>prep_time_minutes</code>, <code>servings</code>,{" "}
-          <code>protein_source</code>, <code>protein_grams</code>, <code>instructions</code>{" "}
-          (optionnelles). Dans une cellule, séparez plusieurs valeurs par un point-virgule (
-          <code>;</code>). Pour les ingrédients, ajoutez la quantité après deux-points, ex.{" "}
-          <code>riz:200g; curry</code> — obligatoire si <code>servings</code> est renseigné.
-        </p>
-        <a
-          href="/recipe-import-template.csv"
-          download
-          className="text-sm text-green-700 underline hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
-        >
-          Télécharger un modèle CSV
-        </a>
-
-        <AdminCsvImportForm onSubmit={handleCsvImport} isLoading={isImporting} />
-
-        {importSuccessMessage && (
-          <p className="text-sm text-green-700 dark:text-green-400">{importSuccessMessage}</p>
+        {error && (
+          <Alert variant="error" className="mt-4 max-w-[640px]">
+            {error}
+          </Alert>
         )}
-        {importError && (
-          <div className="flex flex-col gap-1">
-            <p className="text-sm text-red-600 dark:text-red-400">{importError}</p>
-            {importRowErrors.length > 0 && (
-              <ul className="list-disc pl-5 text-sm text-red-600 dark:text-red-400">
-                {importRowErrors.map((rowError) => (
-                  <li key={rowError.row}>
-                    Ligne {rowError.row} : {rowError.message}
-                  </li>
-                ))}
-              </ul>
+        {successMessage && (
+          <div className="mt-4 flex max-w-[640px] flex-col gap-3">
+            <Alert variant="success">{successMessage}</Alert>
+            {createdImageUrl && (
+              <img
+                src={`${API_BASE_URL}${createdImageUrl}`}
+                alt="Photo de la recette ajoutée"
+                className="max-h-48 rounded-md border border-lisiere"
+              />
             )}
           </div>
         )}
-      </div>
-    </main>
+
+        <hr className="mt-12 max-w-[640px] border-lisiere" />
+
+        <section className="mt-8 flex max-w-[640px] flex-col items-start gap-3">
+          <Eyebrow>Import groupé</Eyebrow>
+          <h2 className="font-display text-2xl text-craie">Importer plusieurs recettes (CSV)</h2>
+          <p className="text-sm text-sauge">
+            Colonnes : <code>title</code>, <code>ingredients</code> (obligatoires),{" "}
+            <code>allergens</code>, <code>prep_time_minutes</code>, <code>servings</code>,{" "}
+            <code>protein_source</code>, <code>protein_grams</code>, <code>instructions</code>{" "}
+            (optionnelles). Dans une cellule, séparez plusieurs valeurs par un point-virgule (
+            <code>;</code>). Pour les ingrédients, ajoutez la quantité après deux-points, ex.{" "}
+            <code>riz:200g; curry</code> — obligatoire si <code>servings</code> est renseigné.
+          </p>
+          <a
+            href="/recipe-import-template.csv"
+            download
+            className="text-sm text-pousse transition-colors hover:text-pousse-clair focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pousse"
+          >
+            Télécharger un modèle CSV
+          </a>
+
+          <AdminCsvImportForm onSubmit={handleCsvImport} isLoading={isImporting} />
+
+          {importSuccessMessage && (
+            <Alert variant="success" className="w-full">
+              {importSuccessMessage}
+            </Alert>
+          )}
+          {importError && (
+            <Alert variant="error" className="w-full">
+              <p>{importError}</p>
+              {importRowErrors.length > 0 && (
+                <ul className="mt-1 list-disc pl-5">
+                  {importRowErrors.map((rowError) => (
+                    <li key={rowError.row}>
+                      Ligne {rowError.row} : {rowError.message}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Alert>
+          )}
+        </section>
+      </main>
+    </AppShell>
   );
 }
 

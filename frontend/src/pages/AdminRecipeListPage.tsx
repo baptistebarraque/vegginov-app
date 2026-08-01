@@ -1,11 +1,17 @@
+import { Sprout } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { listRecipes } from "../api/adminRecipes";
+import { deleteRecipe, exportRecipesCsv, listRecipes } from "../api/adminRecipes";
 import { getCurrentAdmin, logout } from "../api/auth";
+import { AdminTable } from "../components/AdminTable";
+import { AppShell } from "../components/AppShell";
+import { Header } from "../components/Header";
+import { Alert } from "../components/ui/Alert";
+import { Button } from "../components/ui/Button";
+import { EmptyState } from "../components/ui/EmptyState";
+import { Skeleton } from "../components/ui/Skeleton";
 import type { AdminUser } from "../types/auth";
 import type { RecipeListItem } from "../types/recipe";
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 function AdminRecipeListPage() {
   const [admin, setAdmin] = useState<AdminUser | null>(null);
@@ -13,6 +19,9 @@ function AdminRecipeListPage() {
   const [recipes, setRecipes] = useState<RecipeListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -36,6 +45,39 @@ function AdminRecipeListPage() {
       .finally(() => setIsLoading(false));
   }, [admin]);
 
+  async function handleExport() {
+    setIsExporting(true);
+    setExportError(null);
+    try {
+      const blob = await exportRecipesCsv();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "recipes.csv";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Recipe CSV export failed:", err);
+      setExportError("Impossible de télécharger les recettes.");
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
+  async function handleDelete(id: number) {
+    setDeletingId(id);
+    try {
+      await deleteRecipe(id);
+      setRecipes((current) => current.filter((recipe) => recipe.id !== id));
+    } catch {
+      setError("Impossible de supprimer la recette.");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   async function handleLogout() {
     await logout();
     navigate("/admin/login");
@@ -46,50 +88,64 @@ function AdminRecipeListPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center gap-6 bg-white px-4 py-12 dark:bg-neutral-900">
-      <div className="flex w-full max-w-md items-center justify-between">
-        <h1 className="text-3xl font-semibold text-green-800 dark:text-green-400">Recettes</h1>
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="text-sm text-neutral-500 underline hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
-        >
-          Déconnexion
-        </button>
-      </div>
-      <Link
-        to="/admin"
-        className="self-start text-sm text-green-700 underline hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
-      >
-        Ajouter une recette
-      </Link>
+    <AppShell>
+      <Header
+        section="Recettes"
+        actions={
+          <Button variant="ghost" size="sm" onClick={handleLogout}>
+            Se déconnecter
+          </Button>
+        }
+      />
 
-      {isLoading && <p className="text-sm text-neutral-500 dark:text-neutral-400">Chargement...</p>}
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-      {!isLoading && !error && recipes.length === 0 && (
-        <p className="text-sm text-neutral-500 dark:text-neutral-400">Aucune recette pour le moment.</p>
-      )}
+      <main className="pb-24">
+        <h1 className="font-display text-3xl text-craie">Recettes</h1>
 
-      <ul className="flex w-full max-w-md flex-col gap-2">
-        {recipes.map((recipe) => (
-          <li key={recipe.id}>
-            <Link
-              to={`/admin/recipes/${recipe.id}`}
-              className="flex items-center gap-3 rounded border border-neutral-200 px-3 py-2 hover:border-green-600 dark:border-neutral-700 dark:hover:border-green-500"
-            >
-              {recipe.image_url && (
-                <img
-                  src={`${API_BASE_URL}${recipe.image_url}`}
-                  alt=""
-                  className="h-12 w-12 rounded object-cover"
-                />
-              )}
-              <span className="text-neutral-900 dark:text-white">{recipe.title}</span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </main>
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+          <Link
+            to="/admin"
+            className="inline-flex h-9 items-center rounded-md bg-pousse px-4 text-sm font-medium text-nuit transition-colors hover:bg-pousse-clair focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pousse"
+          >
+            Ajouter une recette
+          </Link>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleExport}
+            loading={isExporting}
+            disabled={recipes.length === 0}
+          >
+            Télécharger le CSV
+          </Button>
+        </div>
+
+        {exportError && (
+          <Alert variant="error" className="mt-4">
+            {exportError}
+          </Alert>
+        )}
+
+        <div className="mt-6">
+          {isLoading ? (
+            <div className="flex flex-col gap-2">
+              {[0, 1, 2, 3].map((slot) => (
+                <Skeleton key={slot} className="h-14 w-full" />
+              ))}
+            </div>
+          ) : error ? (
+            <Alert variant="error">{error}</Alert>
+          ) : recipes.length === 0 ? (
+            <EmptyState
+              icon={Sprout}
+              title="Aucune recette pour le moment"
+              description="Ajoutez votre première recette végétarienne pour la voir apparaître ici."
+            />
+          ) : (
+            <AdminTable recipes={recipes} onDelete={handleDelete} deletingId={deletingId} />
+          )}
+        </div>
+      </main>
+    </AppShell>
   );
 }
 

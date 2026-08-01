@@ -19,5 +19,10 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: "./tests/setup.ts",
     include: ["tests/**/*.test.{ts,tsx}"],
+    // The form tests drive many sequential userEvent keystrokes; under full
+    // parallel load on a busy machine they can exceed the 5s default even
+    // though they pass in isolation. Give them headroom so the suite is
+    // deterministic in CI.
+    testTimeout: 20000,
   },
 });

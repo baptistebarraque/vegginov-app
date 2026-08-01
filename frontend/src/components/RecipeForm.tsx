@@ -1,4 +1,8 @@
 import { useState, type FormEvent } from "react";
+import { Button } from "./ui/Button";
+import { Input } from "./ui/Input";
+import { Label } from "./ui/Label";
+import { Textarea } from "./ui/Textarea";
 
 interface RecipeFormProps {
   onSubmit: (title: string, ingredients: string[]) => void;
@@ -19,35 +23,31 @@ function RecipeForm({ onSubmit, isLoading }: RecipeFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex w-full max-w-md flex-col gap-3">
-      <label className="flex flex-col gap-1 text-left text-sm text-neutral-700 dark:text-neutral-300">
-        Nom de la recette
-        <input
+    <form onSubmit={handleSubmit} className="flex w-full max-w-xl flex-col gap-4 text-left">
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="recipe-title">Nom de la recette</Label>
+        <Input
+          id="recipe-title"
           type="text"
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           required
           placeholder="Poulet au curry"
-          className="rounded border border-neutral-300 px-3 py-2 text-neutral-900 focus:border-green-600 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
         />
-      </label>
-      <label className="flex flex-col gap-1 text-left text-sm text-neutral-700 dark:text-neutral-300">
-        Ingrédients (séparés par des virgules)
-        <input
-          type="text"
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="recipe-ingredients">Ingrédients (séparés par des virgules)</Label>
+        <Textarea
+          id="recipe-ingredients"
           value={ingredientsText}
           onChange={(event) => setIngredientsText(event.target.value)}
           placeholder="poulet, curry, lait de coco"
-          className="rounded border border-neutral-300 px-3 py-2 text-neutral-900 focus:border-green-600 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
+          rows={3}
         />
-      </label>
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="rounded bg-green-700 px-4 py-2 font-medium text-white transition hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {isLoading ? "Recherche..." : "Trouver des recettes"}
-      </button>
+      </div>
+      <Button type="submit" size="lg" loading={isLoading} className="self-start">
+        {isLoading ? "Recherche…" : "Trouver des recettes"}
+      </Button>
     </form>
   );
 }

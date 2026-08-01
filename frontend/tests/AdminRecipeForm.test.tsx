@@ -8,7 +8,13 @@ describe("AdminRecipeForm", () => {
   it("submits multiple ingredients with name+quantity, allergens, instructions and numeric fields", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
-    render(<AdminRecipeForm onSubmit={onSubmit} isLoading={false} />);
+    render(
+      <AdminRecipeForm
+        onSubmit={onSubmit}
+        isLoading={false}
+        proteinSourceOptions={["lentilles corail"]}
+      />,
+    );
 
     await user.type(screen.getByLabelText(/nom de la recette/i), "Curry de lentilles corail");
     await user.type(screen.getByLabelText(/nom de l'ingrédient 1/i), "lentilles corail");

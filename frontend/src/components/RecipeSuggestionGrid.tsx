@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import RecipeDetailPanel from "./RecipeDetailPanel";
 import RecipeSuggestionCard from "./RecipeSuggestionCard";
 import type { RecipeSuggestion } from "../types/recipe";
+import { DURATION, EASE_OUT, STAGGER } from "../utils/motion";
 
 const EXPANDED_TRACK = "3fr";
 const COLLAPSED_TRACK = "1fr";
@@ -119,11 +120,15 @@ function RecipeSuggestionGrid({ suggestions }: RecipeSuggestionGridProps) {
           }
         }}
       >
-        {suggestions.map((suggestion) => (
+        {suggestions.map((suggestion, index) => (
           <motion.div
             key={suggestion.id}
             layout
             style={{ transformPerspective: 1200 }}
+            // Cards fade in with a 60ms stagger on mount (docs/FRONTEND.md §6.2).
+            // Opacity only, not y: a manual translate would fight the `layout`
+            // transform on this same element used for the corner-grow resize.
+            initial={{ opacity: 0 }}
             // Driven by our own hoveredId state rather than Framer's whileHover:
             // whileHover tracks native hover on this exact element, but rotating
             // it changes its own on-screen hit-test shape near 90°/270°, which
@@ -131,9 +136,12 @@ function RecipeSuggestionGrid({ suggestions }: RecipeSuggestionGridProps) {
             // from the (non-rotating) grid container's mouseLeave, so it stays
             // stable regardless of what the rotation does to this element.
             animate={
-              prefersReducedMotion ? undefined : { rotateY: hoveredId === suggestion.id ? 360 : 0 }
+              prefersReducedMotion
+                ? { opacity: 1 }
+                : { opacity: 1, rotateY: hoveredId === suggestion.id ? 360 : 0 }
             }
             transition={{
+              opacity: { duration: DURATION.enter, ease: EASE_OUT, delay: index * STAGGER },
               layout: { duration: 0.4, ease: "easeInOut" },
               rotateY: { duration: 0.6, ease: "easeInOut" },
             }}

@@ -310,3 +310,46 @@ the old image file before saving the new one (rejected — a failed upload
 would leave the recipe with no image at all instead of keeping the
 original); a separate edit-only form component (rejected — would duplicate
 every field and the quantity-required-with-servings UX rule).
+
+---
+
+## Frontend design system: tokens in CSS, framer-motion as the only animator
+
+Date: 2026-08-01
+Context: the first real visual pass (docs/FRONTEND.md, the "potager de nuit"
+dark theme) needed a single home for design tokens and one animation engine,
+across public + admin screens, without scattering hex values or stacking two
+animation libraries.
+Decision:
+- **Tokens live in `frontend/src/index.css`** as the single source of truth.
+  Colour/font/radius sit inside Tailwind v4's `@theme` block so they both
+  emit as CSS custom properties *and* generate utilities (`bg-nuit`,
+  `text-craie`, `font-display`, `rounded-lg`). Motion tokens (`--dur-*`,
+  `--ease-*`) sit in a plain `:root` block because they are consumed by raw
+  CSS transitions, not Tailwind utilities. This is Tailwind v4's `@theme`
+  mechanism, not a `tailwind.config.js` — the repo is on Tailwind v4, and the
+  brief forbids migrating versions in this pass. No hex value may appear in
+  any component; a hardcoded colour outside `index.css` is a bug.
+- **framer-motion is the only animation engine** (already in the stack
+  table). Its `layout` FLIP already drives the results-grid corner-grow
+  resize, and Phase 3 will lean on the same primitive, so adding a second
+  library (anime.js/GSAP) would mean two engines fighting over the same
+  transforms. Motion token values are mirrored once as JS constants in
+  `src/utils/motion.ts` (seconds + cubic-bezier arrays framer needs) rather
+  than re-read from CSS at runtime.
+- **Reduced motion is honoured in one place**: a `<MotionConfig
+  reducedMotion="user">` at the app root plus `useReducedMotion` in the few
+  components with bespoke motion, backed by a `prefers-reduced-motion` CSS
+  floor in `index.css` — not a per-component opt-out.
+- **Primitives are copied into `src/components/ui/`** (Button, Input, Card,
+  …), never pulled from a component-registry dependency, and restyled to the
+  tokens; variant logic uses `class-variance-authority`, class composition a
+  `cn()` helper (`clsx` + `tailwind-merge`).
+Alternatives considered: a `tailwind.config.js` `theme.extend` (rejected —
+that is the Tailwind v3 mechanism; this repo is v4, where `@theme` in CSS is
+the idiom); a second animation library for "richer" effects (rejected —
+framer-motion v12 covers this pass and Phase 3's `layout` needs, and two
+engines animating the same elements is a bug factory); reading CSS custom
+properties from JS at runtime to avoid the small motion-token duplication
+(rejected — over-engineered; a handful of durations/easings mirrored in one
+file is cheaper and type-safe).

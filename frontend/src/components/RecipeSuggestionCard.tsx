@@ -32,7 +32,7 @@ function RecipeSuggestionCard({
       onFocus={onFocus}
       aria-expanded={expanded}
       aria-label={`Voir la recette : ${suggestion.title}`}
-      className="flex h-full w-full flex-col items-center justify-center gap-1 rounded-lg bg-white px-2 text-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600 dark:bg-neutral-900"
+      className="flex h-full w-full flex-col items-center justify-center gap-1 rounded-lg px-2 text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pousse"
     >
       {suggestion.image_url && (
         <img
@@ -41,10 +41,8 @@ function RecipeSuggestionCard({
           className="max-h-[80%] w-auto object-contain"
         />
       )}
-      <p className="text-sm font-medium text-neutral-800 dark:text-neutral-100">
-        {suggestion.title}
-      </p>
-      {hint && <p className="text-xs text-neutral-500 dark:text-neutral-400">{hint}</p>}
+      <p className="font-display text-base text-craie">{suggestion.title}</p>
+      {hint && <p className="font-mono text-xs text-sauge">{hint}</p>}
     </button>
   );
 }

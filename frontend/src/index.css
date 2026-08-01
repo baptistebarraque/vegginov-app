@@ -1,1 +1,163 @@
 @import "tailwindcss";
+
+/*
+ * Design tokens — the single source of truth for colour, type, radius and
+ * motion (see docs/FRONTEND.md §3). No hex value may live outside this file.
+ * Concept: "potager de nuit" — a dark, warm night kitchen garden.
+ *
+ * Colour / font / radius tokens live in @theme so Tailwind generates the
+ * matching utilities (bg-nuit, text-craie, font-display, rounded-lg, ...).
+ * Motion tokens live in :root below because they are consumed by raw CSS
+ * transitions and mirrored as JS constants in utils/motion.ts, not as
+ * Tailwind utilities.
+ */
+@theme {
+  /* Colour */
+  --color-nuit: #08120e; /* page background, deepest layer */
+  --color-potager: #0d1a14; /* app background / large sections */
+  --color-feuille: #13251c; /* card & panel surface */
+  --color-feuille-haut: #1a3325; /* raised surface, inputs, hover */
+  --color-lisiere: #264533; /* borders, hairlines, dividers */
+  --color-sauge: #93ab9b; /* muted text, captions, placeholders */
+  --color-craie: #eaf2e6; /* primary text */
+  --color-pousse: #a6d95b; /* primary action, focus ring, active */
+  --color-pousse-clair: #bce578; /* primary hover */
+  --color-pousse-sourd: #5c7a33; /* disabled primary, subtle fills */
+  --color-betterave: #e4577e; /* accent: marks the source (non-veg) recipe */
+  --color-brique: #c24a3e; /* destructive only (admin delete) */
+
+  /* Typography */
+  --font-display: "Fraunces Variable", Georgia, "Times New Roman", serif;
+  --font-sans: "Instrument Sans", "Public Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", monospace;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+}
+
+/*
+ * Motion tokens (docs/FRONTEND.md §3.4). Kept as plain custom properties so
+ * they are always emitted and usable in CSS transitions; the JS/framer-motion
+ * equivalents live in src/utils/motion.ts.
+ */
+:root {
+  --dur-micro: 120ms; /* hover, press, colour change */
+  --dur-base: 220ms; /* enter/exit, route transition */
+  --dur-enter: 420ms; /* card and section reveals */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+@layer base {
+  html {
+    background-color: var(--color-nuit);
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-nuit);
+    color: var(--color-craie);
+    font-family: var(--font-sans);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Display type: tight leading, subtle negative tracking (§3.2). */
+  h1,
+  h2 {
+    font-family: var(--font-display);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+  }
+
+  ::selection {
+    background-color: var(--color-pousse);
+    color: var(--color-nuit);
+  }
+
+  /* No default white anywhere, including the scrollbar. */
+  * {
+    scrollbar-color: var(--color-lisiere) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--color-lisiere);
+    border-radius: var(--radius-pill);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-feuille-haut);
+  }
+
+  /* Autofill must not paint a white box (§9 / DoD). */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill {
+    -webkit-text-fill-color: var(--color-craie);
+    caret-color: var(--color-craie);
+    transition: background-color 9999s ease-out 0s;
+  }
+
+  /* Visible keyboard focus everywhere: 2px pousse ring, 2px offset (§7). */
+  :focus-visible {
+    outline: 2px solid var(--color-pousse);
+    outline-offset: 2px;
+  }
+
+  ::placeholder {
+    color: var(--color-sauge);
+    opacity: 1;
+  }
+
+  /* Inline code chips (e.g. CSV column names in the admin import help). */
+  code {
+    border-radius: var(--radius-sm);
+    background-color: var(--color-feuille-haut);
+    padding: 0.1em 0.35em;
+    color: var(--color-craie);
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+  }
+
+  /* File-input button must not render as a white native control. */
+  ::file-selector-button {
+    margin-right: 12px;
+    cursor: pointer;
+    border: 1px solid var(--color-lisiere);
+    border-radius: var(--radius-sm);
+    background-color: var(--color-feuille);
+    padding: 4px 12px;
+    color: var(--color-craie);
+    font-family: inherit;
+  }
+}
+
+/*
+ * Reduced-motion floor. The primary implementation is a useReducedMotion hook
+ * + a MotionConfig at the app root (docs/FRONTEND.md §7); this CSS is a safety
+ * net for any non-framer transition.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 120ms !important;
+    scroll-behavior: auto !important;
+  }
+}

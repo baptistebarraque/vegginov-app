@@ -1,6 +1,8 @@
 import { motion } from "framer-motion";
+import { X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import IngredientBurst from "./IngredientBurst";
+import { Badge } from "./ui/Badge";
 import type { RecipeSuggestion } from "../types/recipe";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -19,7 +21,7 @@ function RecipeDetailPanel({ suggestion, onClose }: RecipeDetailPanelProps) {
 
   return (
     <motion.div
-      className="fixed inset-0 z-30 flex items-center justify-center bg-black/60 p-4"
+      className="fixed inset-0 z-30 flex items-center justify-center bg-nuit/80 p-4"
       onClick={onClose}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -31,27 +33,27 @@ function RecipeDetailPanel({ suggestion, onClose }: RecipeDetailPanelProps) {
           role="dialog"
           aria-modal="true"
           aria-labelledby="recipe-detail-title"
-          className="max-h-full w-full overflow-y-auto rounded-lg bg-white p-6 dark:bg-neutral-900"
+          className="max-h-full w-full overflow-y-auto rounded-lg border border-lisiere bg-feuille p-6 shadow-[0_1px_2px_rgb(0_0_0/0.4)]"
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.2 }}
         >
           <div className="flex items-start justify-between gap-4">
-            <h2
-              id="recipe-detail-title"
-              className="text-xl font-semibold text-green-800 dark:text-green-400"
-            >
-              {suggestion.title}
-            </h2>
+            <div className="flex flex-col items-start gap-2">
+              <h2 id="recipe-detail-title" className="font-display text-2xl text-craie">
+                {suggestion.title}
+              </h2>
+              <Badge variant="score">{Math.round(suggestion.score * 100)} % de proximité</Badge>
+            </div>
             <button
               ref={closeButtonRef}
               type="button"
               onClick={onClose}
               aria-label="Fermer"
-              className="text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+              className="rounded-sm text-sauge transition-colors hover:text-craie focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pousse"
             >
-              ✕
+              <X className="size-5" aria-hidden="true" />
             </button>
           </div>
 
@@ -63,35 +65,35 @@ function RecipeDetailPanel({ suggestion, onClose }: RecipeDetailPanelProps) {
             />
           )}
 
-          <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-neutral-600 dark:text-neutral-400">
+          <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-sauge">
             {suggestion.prep_time_minutes !== null && (
               <>
-                <dt className="font-medium">Préparation</dt>
-                <dd>{suggestion.prep_time_minutes} min</dd>
+                <dt className="font-medium text-sauge">Préparation</dt>
+                <dd className="font-mono text-craie">{suggestion.prep_time_minutes} min</dd>
               </>
             )}
             {suggestion.servings !== null && (
               <>
-                <dt className="font-medium">Portions</dt>
-                <dd>{suggestion.servings}</dd>
+                <dt className="font-medium text-sauge">Portions</dt>
+                <dd className="font-mono text-craie">{suggestion.servings}</dd>
               </>
             )}
             {suggestion.protein_source !== null && (
               <>
-                <dt className="font-medium">Source de protéines</dt>
-                <dd>{suggestion.protein_source}</dd>
+                <dt className="font-medium text-sauge">Source de protéines</dt>
+                <dd className="text-craie">{suggestion.protein_source}</dd>
               </>
             )}
           </dl>
 
           {(suggestion.allergens ?? []).length > 0 && (
-            <p className="mt-4 text-sm text-red-700 dark:text-red-400">
+            <p className="mt-4 text-sm text-brique">
               Allergènes : {suggestion.allergens.join(", ")}
             </p>
           )}
 
-          <h3 className="mt-4 font-medium text-neutral-900 dark:text-white">Ingrédients</h3>
-          <ul className="mt-1 list-disc pl-5 text-sm text-neutral-700 dark:text-neutral-300">
+          <h3 className="mt-4 font-medium text-craie">Ingrédients</h3>
+          <ul className="mt-1 list-disc pl-5 text-sm text-sauge marker:text-lisiere">
             {(suggestion.ingredients ?? []).map((ingredient, index) => (
               <li key={`${ingredient.name}-${index}`}>
                 {ingredient.name}
@@ -102,8 +104,8 @@ function RecipeDetailPanel({ suggestion, onClose }: RecipeDetailPanelProps) {
 
           {(suggestion.instructions ?? []).length > 0 && (
             <>
-              <h3 className="mt-4 font-medium text-neutral-900 dark:text-white">Préparation</h3>
-              <ol className="mt-1 list-decimal pl-5 text-sm text-neutral-700 dark:text-neutral-300">
+              <h3 className="mt-4 font-medium text-craie">Préparation</h3>
+              <ol className="mt-1 list-decimal pl-5 text-sm text-sauge marker:text-lisiere">
                 {suggestion.instructions.map((step, index) => (
                   <li key={index}>{step}</li>
                 ))}

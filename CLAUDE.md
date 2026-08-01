@@ -48,6 +48,11 @@ See `docs/ROADMAP.md` for the full phase breakdown.
 | Frontend | React + TypeScript + Vite | strict TS mode |
 | Routing | `react-router` | needed once the app has more than one page (admin login/upload) |
 | Styling | Tailwind CSS | no scattered custom CSS |
+| Class composition | `clsx` + `tailwind-merge` | conditional Tailwind class composition via a `cn()` helper (`src/utils/cn.ts`); tailwind-merge dedupes conflicting utilities |
+| Component variants | `class-variance-authority` | typed variant definitions for Button/Badge/Alert, keeps variant logic out of JSX |
+| Icons | `lucide-react` | tree-shakeable icon set (ISC licence), no icon font |
+| Fonts | `@fontsource-variable/fraunces`, `@fontsource/instrument-sans`, `@fontsource-variable/jetbrains-mono` | self-hosted display/UI/data fonts (docs/FRONTEND.md §3.2), no runtime third-party request |
+| Accessible primitives | `@radix-ui/react-label`, `@radix-ui/react-dialog` | unstyled accessible label + dialog (admin delete confirmation) behind the styled UI components |
 | Animation | `framer-motion` (v12) | Phase 3 hover/click recipe-grid interaction — `layout` animations handle the coordinated resize of the hovered card *and* its 3 siblings (corner-anchored grow/shrink) via automatic FLIP, without hand-computing a transform per card as plain CSS/anime.js would require |
 | Containerization | Docker + docker-compose | reproducible env from day one |
 | Python deps | `uv` + `pyproject.toml` | |
@@ -101,9 +106,11 @@ veggie-app/
 ├── frontend/
 │   ├── src/
 │   │   ├── api/                       # HTTP calls to backend
-│   │   ├── components/
+│   │   ├── components/                # app components (Header, RecipeForm, ...)
+│   │   │   └── ui/                    # styled primitives (Button, Card, Input, ...)
 │   │   ├── pages/
-│   │   └── types/
+│   │   ├── types/
+│   │   └── utils/                     # framework-agnostic helpers (cn, motion tokens, ...)
 │   └── tests/
 └── .github/workflows/ci.yml
 ```
@@ -167,4 +174,6 @@ npm run lint
    approval.
 7. Keep UI-facing strings in French; keep code (identifiers, comments,
    commit messages) in English.
+8. For any frontend/visual work, read `docs/FRONTEND.md` first and follow it
+   exactly (design tokens, dark-green theme, motion system).
  
