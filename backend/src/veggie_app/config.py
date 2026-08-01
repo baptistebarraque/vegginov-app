@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     # relative path in both cases keeps the CLI and web upload path writing
     # to the same place — see docker-compose.yml's bind mount for this dir.
     upload_dir: Path = Path("uploads")
+    # Same reasoning as upload_dir: bind-mounted rather than baked into the
+    # Docker image, since these are large external files not committed to
+    # git — see backend/data/flavorgraph/README.md.
+    flavorgraph_dir: Path = Path("data/flavorgraph")
 
 
 settings = Settings()

@@ -30,10 +30,10 @@ CI (lint + tests on every push). No product features yet.
   equivalence (calories, protein, etc.), not similarity alone, could for instance use knowns replacement for meats (tofu, seitan, tsp,..)
 
 
-## Phase 3 — Combined scoring + frontend amelioration
+## Phase 3 — Frontend amelioration
 
 
-- Improving the frontend with cool animations using anime.js, with 3d animations and cool ui tools.
+- Improving the frontend with cool animations using Framer Motion, with 3d animations and cool ui tools.
 
 ## Phase 4 — User accounts
 

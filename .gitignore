@@ -23,6 +23,12 @@ dist/
 backend/uploads/*
 !backend/uploads/.gitkeep
 
+# FlavorGraph ingredient embeddings (external asset, not committed — see
+# backend/data/flavorgraph/README.md for what goes here and where to get it)
+backend/data/flavorgraph/*
+!backend/data/flavorgraph/.gitkeep
+!backend/data/flavorgraph/README.md
+
 # Editors / OS
 .vscode/
 .idea/

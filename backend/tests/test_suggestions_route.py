@@ -27,7 +27,11 @@ def test_post_suggestions_returns_matching_recipes(client: TestClient, db_sessio
     body = response.json()
     assert len(body["suggestions"]) == 1
     assert body["suggestions"][0]["title"] == "Curry de lentilles"
-    assert body["suggestions"][0]["ingredients"] == ["lentilles", "curry"]
+    assert body["suggestions"][0]["ingredients"] == [
+        {"name": "lentilles", "quantity": None},
+        {"name": "curry", "quantity": None},
+    ]
+    assert body["suggestions"][0]["image_url"] is None
 
 
 def test_post_suggestions_empty_db_returns_empty_list(client: TestClient) -> None:

@@ -9,7 +9,7 @@ can't express as repeated fields, so it travels as one JSON-encoded string
 field instead, validated against IngredientEntrySchema.
 """
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 from pydantic import TypeAdapter, ValidationError
 from sqlalchemy.orm import Session
 
@@ -26,7 +26,7 @@ from veggie_app.schemas.recipe import (
 from veggie_app.services import auth_service, image_service, recipe_import_service, recipe_service
 from veggie_app.services.image_service import InvalidImageError
 from veggie_app.services.recipe_import_service import CsvImportError
-from veggie_app.services.recipe_service import IngredientQuantityError
+from veggie_app.services.recipe_service import IngredientQuantityError, ProteinSourceError
 
 router = APIRouter(prefix="/admin")
 
@@ -63,6 +63,13 @@ def _to_response(recipe: Recipe) -> RecipeResponse:
     )
 
 
+@router.get("/protein-sources", response_model=list[str])
+def list_protein_source_options(
+    _admin: User = Depends(auth_service.require_admin),
+) -> list[str]:
+    return recipe_service.list_protein_source_options()
+
+
 @router.get("/recipes", response_model=list[RecipeListItem])
 def list_recipes(
     db: Session = Depends(get_db),
@@ -76,6 +83,22 @@ def list_recipes(
         )
         for recipe in recipe_service.list_recipes(db)
     ]
+
+
+@router.get("/recipes/export")
+def export_recipes(
+    db: Session = Depends(get_db),
+    _admin: User = Depends(auth_service.require_admin),
+) -> Response:
+    # Declared before GET /recipes/{recipe_id} so "export" isn't captured as a
+    # recipe id. A UTF-8 BOM is prepended so Excel shows accented French text
+    # correctly; parse_csv reads with utf-8-sig, so the BOM round-trips away.
+    content = recipe_import_service.export_recipes_to_csv(db)
+    return Response(
+        content=("﻿" + content).encode("utf-8"),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="recipes.csv"'},
+    )
 
 
 @router.get("/recipes/{recipe_id}", response_model=RecipeResponse)
@@ -123,7 +146,7 @@ def create_recipe(
             instructions=instructions,
             image_filename=image_filename,
         )
-    except IngredientQuantityError as exc:
+    except (IngredientQuantityError, ProteinSourceError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     db.commit()
@@ -175,7 +198,7 @@ def update_recipe(
             instructions=instructions,
             image_filename=image_filename,
         )
-    except IngredientQuantityError as exc:
+    except (IngredientQuantityError, ProteinSourceError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     db.commit()

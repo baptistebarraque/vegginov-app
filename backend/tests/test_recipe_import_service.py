@@ -94,6 +94,16 @@ def test_parse_csv_allows_missing_quantity_without_servings() -> None:
     assert rows[0]["ingredients"] == [{"name": "laitue", "quantity": None}]
 
 
+def test_parse_csv_rejects_unknown_protein_source() -> None:
+    with pytest.raises(CsvImportError) as exc_info:
+        recipe_import_service.parse_csv(
+            "title,ingredients,protein_source\nSalade,laitue,boeuf haché\n"
+        )
+
+    assert exc_info.value.errors[0].row_number == 2
+    assert "boeuf haché" in exc_info.value.errors[0].message
+
+
 def test_import_recipes_from_csv_persists_all_valid_rows(db_session: Session) -> None:
     recipes = recipe_import_service.import_recipes_from_csv(db_session, VALID_CSV)
 
@@ -109,3 +119,73 @@ def test_import_recipes_from_csv_is_all_or_nothing(db_session: Session) -> None:
         recipe_import_service.import_recipes_from_csv(db_session, csv_with_one_bad_row)
 
     assert db_session.execute(select(Recipe)).scalars().all() == []
+
+
+def test_export_recipes_to_csv_has_header_and_row_per_recipe(db_session: Session) -> None:
+    recipe_import_service.import_recipes_from_csv(db_session, VALID_CSV)
+
+    exported = recipe_import_service.export_recipes_to_csv(db_session)
+
+    lines = exported.splitlines()
+    assert lines[0] == (
+        "title,ingredients,allergens,prep_time_minutes,servings,protein_source,"
+        "protein_grams,instructions"
+    )
+    assert len(lines) == 3  # header + two recipes
+
+
+def test_export_recipes_to_csv_round_trips_through_import(db_session: Session) -> None:
+    original = recipe_import_service.import_recipes_from_csv(db_session, VALID_CSV)
+    exported = recipe_import_service.export_recipes_to_csv(db_session)
+
+    reparsed = recipe_import_service.parse_csv(exported)
+
+    by_title = {row["title"]: row for row in reparsed}
+    curry = by_title["Curry de lentilles corail"]
+    assert curry["ingredients"] == [
+        {"name": "lentilles corail", "quantity": "200g"},
+        {"name": "lait de coco", "quantity": "200ml"},
+        {"name": "curry", "quantity": "1 c.a.s"},
+    ]
+    assert curry["allergens"] == ["gluten"]
+    assert curry["prep_time_minutes"] == 25
+    assert curry["servings"] == 4
+    assert curry["protein_source"] == "lentilles corail"
+    assert curry["protein_grams"] == 15.0
+    assert curry["instructions"] == ["Faire chauffer le lait de coco", "Ajouter le curry"]
+
+    salade = by_title["Salade de quinoa"]
+    assert salade["ingredients"] == [
+        {"name": "quinoa", "quantity": None},
+        {"name": "tomates", "quantity": None},
+    ]
+    assert salade["allergens"] == []
+    assert salade["prep_time_minutes"] is None
+    assert len(original) == len(reparsed)
+
+
+def test_export_formats_integral_protein_grams_without_decimal(db_session: Session) -> None:
+    recipe_service.create_recipe(
+        db_session,
+        title="Tofu grillé",
+        ingredients=[{"name": "tofu", "quantity": "200g"}],
+        protein_grams=15.0,
+    )
+
+    exported = recipe_import_service.export_recipes_to_csv(db_session)
+
+    assert ",15," in exported
+    assert "15.0" not in exported
+
+
+def test_export_escapes_commas_in_values(db_session: Session) -> None:
+    recipe_service.create_recipe(
+        db_session,
+        title="Salade, verte",
+        ingredients=[{"name": "laitue", "quantity": None}],
+    )
+
+    exported = recipe_import_service.export_recipes_to_csv(db_session)
+
+    assert '"Salade, verte"' in exported
+    assert recipe_import_service.parse_csv(exported)[0]["title"] == "Salade, verte"

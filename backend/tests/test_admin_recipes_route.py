@@ -171,6 +171,41 @@ def test_create_recipe_with_image_stores_and_returns_url(
     )
 
 
+def test_create_recipe_rejects_unknown_protein_source(
+    client: TestClient, db_session: Session
+) -> None:
+    _login_as_admin(client, db_session)
+
+    response = client.post(
+        "/admin/recipes",
+        data={
+            "title": "Salade",
+            "ingredients": _ingredients_field([{"name": "laitue"}]),
+            "protein_source": "steak",
+        },
+    )
+
+    assert response.status_code == 400
+    assert db_session.query(Recipe).count() == 0
+
+
+def test_protein_sources_requires_admin_session(client: TestClient) -> None:
+    assert client.get("/admin/protein-sources").status_code == 401
+
+
+def test_protein_sources_returns_known_vocabulary(
+    client: TestClient, db_session: Session
+) -> None:
+    _login_as_admin(client, db_session)
+
+    response = client.get("/admin/protein-sources")
+
+    assert response.status_code == 200
+    options = response.json()
+    assert "tofu" in options
+    assert "seitan" in options
+
+
 def test_create_recipe_rejects_invalid_image_extension(
     client: TestClient, db_session: Session, tmp_path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

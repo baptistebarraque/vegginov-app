@@ -33,6 +33,10 @@ services:
       # running locally (`uv run python -m veggie_app.admin.add_recipe_cli`),
       # since both write to the same `settings.upload_dir` relative path.
       - ./backend/uploads:/app/uploads
+      # Same reasoning: FlavorGraph's pickle/CSV are large external files not
+      # committed to git or baked into the image — see
+      # backend/data/flavorgraph/README.md.
+      - ./backend/data/flavorgraph:/app/data/flavorgraph
     depends_on:
       postgres:
         condition: service_healthy

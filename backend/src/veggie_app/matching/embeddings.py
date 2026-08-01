@@ -4,6 +4,11 @@ Uses sentence-transformers with a multilingual model (see
 docs/ARCHITECTURE.md) so French recipe/query text embeds meaningfully.
 Callers (services/) only depend on this module's function signatures, so a
 future model swap won't touch routes or services.
+
+Embeds a recipe's *title only* — see docs/ARCHITECTURE.md's "Ingredients
+view + Title view fusion" entry for why ingredient text is no longer folded
+into this embedding (ingredient-based similarity is now handled by
+matching/ingredients_view.py instead).
 """
 
 from functools import lru_cache
@@ -14,10 +19,6 @@ if TYPE_CHECKING:
 
 EMBEDDING_MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
 EMBEDDING_DIM = 384
-
-
-def build_query_text(title: str, ingredients: list[str]) -> str:
-    return " ".join([title, *ingredients])
 
 
 @lru_cache(maxsize=1)

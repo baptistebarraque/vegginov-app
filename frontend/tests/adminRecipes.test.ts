@@ -3,6 +3,7 @@ import {
   CsvImportValidationError,
   createRecipe,
   deleteRecipe,
+  exportRecipesCsv,
   getRecipe,
   importRecipesCsv,
   listRecipes,
@@ -188,6 +189,31 @@ describe("listRecipes", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 401 }));
 
     await expect(listRecipes()).rejects.toThrow("401");
+  });
+});
+
+describe("exportRecipesCsv", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("GETs the export endpoint with credentials and returns the blob", async () => {
+    const blob = new Blob(["title,ingredients\nSalade,laitue\n"], { type: "text/csv" });
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, blob: () => Promise.resolve(blob) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await exportRecipesCsv();
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toMatch(/\/admin\/recipes\/export$/);
+    expect(init.credentials).toBe("include");
+    expect(result).toBe(blob);
+  });
+
+  it("throws when the response is not ok", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 401 }));
+
+    await expect(exportRecipesCsv()).rejects.toThrow("401");
   });
 });
 

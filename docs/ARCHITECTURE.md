@@ -94,6 +94,53 @@ already covers the main attack path).
 
 ---
 
+## Ingredients view + Title view fusion
+
+Date: 2026-07-26
+Context: Phase 2's "first implementation of the similarity search" replaces
+the Phase 1 POC's single whole-recipe embedding (title + ingredient names,
+one cosine-similarity ranking) with a multi-view score, per the recipe-
+matching design notes. A raw embedding over the full ingredient vocabulary
+conflates "what gets cooked together" with "what plays the same role as",
+which isn't what similarity should mean here.
+Decision:
+- **Ingredients view** (`matching/ingredients_view.py`): a protein sub-score
+  (`matching/substitution.py`, a hand-curated meat/fish -> vegetarian
+  substitution table — a small closed problem, more reliable here than an
+  embedding trained for ingredient co-occurrence) and a non-protein
+  sub-score (`matching/ingredient_similarity.py`, FlavorGraph embeddings +
+  the Hungarian algorithm for optimal ingredient-to-ingredient matching),
+  combined with a fixed `protein_weight` (0.4, arbitrary starting point).
+  A candidate recipe's protein is read directly from its (now
+  dropdown-constrained) `protein_source` field; a user's query has no such
+  field, so its protein-like word(s) are detected from the raw ingredient
+  list against the substitution table's vocabulary instead
+  (`split_query_ingredients_by_role`).
+- **Title view** (`matching/embeddings.py`): `Recipe.embedding` now stores a
+  **title-only** sentence-transformers embedding, not title + ingredients —
+  ingredient-based similarity moved entirely to the Ingredients view above,
+  so folding ingredient text into this embedding too would double-count it
+  with a much cruder signal. Existing rows were recomputed once via
+  `backend/scripts/recompute_title_embeddings.py` (safe to re-run).
+- **Fusion** (`matching/fusion.py`): `fuse_scores` combines the two views
+  with a fixed `title_weight` (0.3, arbitrary starting point) into the
+  score `get_suggestions` ranks candidates by.
+- FlavorGraph's data files are a manually-downloaded, gitignored asset
+  (~10MB, not committed — see `backend/data/flavorgraph/README.md`), absent
+  in CI and on a fresh clone. `flavorgraph.get_vector` catches their absence
+  and returns `None` rather than raising, so a missing dataset degrades the
+  Ingredients view's non-protein sub-score to 0 instead of crashing every
+  suggestion request.
+Alternatives considered: a second `title_embedding` column alongside the
+existing one (rejected — the old title+ingredients embedding has no
+remaining use once the Ingredients view exists, so keeping it around would
+just be dead weight); computing the two weights via logistic regression
+from the start (rejected — no manually judged pairs exist yet to train on;
+fixed weights are the documented starting point in the design notes,
+section 6.2, revisit once ~150-300 judged pairs exist).
+
+---
+
 ## Recipe image storage: local disk, bind-mounted
 
 Date: 2026-07-24
@@ -161,6 +208,16 @@ would re-create the rows that already succeeded, with no natural
 duplicate-detection to fall back on at this POC stage; a separate CLI
 bulk-import command — rejected for now, no immediate need beyond the web
 flow the admin already uses.
+
+**CSV export** (`GET /admin/recipes/export`, admin-only; download button on
+the admin recipe-list page) is the inverse of import:
+`recipe_import_service.export_recipes_to_csv` serializes every recipe with the
+same columns and semicolon sub-delimiter `parse_csv` accepts, so a downloaded
+file round-trips back through import unchanged (verified by a round-trip test).
+Export and import share the column list and delimiter constants in one module
+so the two formats can't drift apart. Images are omitted, matching import. A
+UTF-8 BOM is prepended so spreadsheet apps render accented French correctly;
+`parse_csv` reads with `utf-8-sig`, so the BOM is stripped on re-upload.
 
 ---
 

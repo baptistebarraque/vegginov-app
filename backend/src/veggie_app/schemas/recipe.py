@@ -8,20 +8,27 @@ class SuggestionRequest(BaseModel):
     ingredients: list[str] = Field(default_factory=list)
 
 
+class IngredientEntrySchema(BaseModel):
+    name: str
+    quantity: str | None = None
+
+
 class RecipeSuggestion(BaseModel):
     id: int
     title: str
-    ingredients: list[str]
+    ingredients: list[IngredientEntrySchema]
     score: float
+    allergens: list[str]
+    prep_time_minutes: int | None
+    servings: int | None
+    protein_source: str | None
+    protein_grams: float | None
+    instructions: list[str]
+    image_url: str | None
 
 
 class SuggestionResponse(BaseModel):
     suggestions: list[RecipeSuggestion]
-
-
-class IngredientEntrySchema(BaseModel):
-    name: str
-    quantity: str | None = None
 
 
 class RecipeResponse(BaseModel):

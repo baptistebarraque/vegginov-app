@@ -39,12 +39,16 @@ See `docs/ROADMAP.md` for the full phase breakdown.
 | Database | PostgreSQL + `pgvector` extension | embeddings stored natively, no ad-hoc numpy storage |
 | Vector column type | `pgvector` (Python package) | SQLAlchemy binding for the `pgvector` Postgres extension |
 | Embeddings | `sentence-transformers` (multilingual model) | local, no paid external API |
+| Numeric arrays | `numpy` | direct dependency (not just transitive via torch) because `matching/` imports it directly for vector/matrix ops — see the torch/uv lesson in `docs/ARCHITECTURE.md` on why transitive-only deps are fragile |
+| Ingredient-set matching | `scipy` (`optimize.linear_sum_assignment`) | Hungarian algorithm for optimal one-to-one ingredient matching between two recipes (Phase 2 ingredients-view similarity) |
+| Ingredient embeddings | FlavorGraph pretrained vectors (Apache 2.0) | local data asset (not a pip package), not committed to git — see `backend/data/flavorgraph/README.md` |
 | Password hashing | `bcrypt` | industry-standard adaptive hashing for admin credentials |
 | Multipart form parsing | `python-multipart` | required by FastAPI's `Form`/`UploadFile` — the admin recipe endpoint needs multipart to accept an optional image alongside text fields |
 | Recipe image storage | local disk (`backend/uploads/`, bind-mounted, served via FastAPI `StaticFiles`) | no external/paid storage service; works for the planned VPS/self-hosted deployment target |
 | Frontend | React + TypeScript + Vite | strict TS mode |
 | Routing | `react-router` | needed once the app has more than one page (admin login/upload) |
 | Styling | Tailwind CSS | no scattered custom CSS |
+| Animation | `framer-motion` (v12) | Phase 3 hover/click recipe-grid interaction — `layout` animations handle the coordinated resize of the hovered card *and* its 3 siblings (corner-anchored grow/shrink) via automatic FLIP, without hand-computing a transform per card as plain CSS/anime.js would require |
 | Containerization | Docker + docker-compose | reproducible env from day one |
 | Python deps | `uv` + `pyproject.toml` | |
 | Lint/format | `ruff` (backend), ESLint + Prettier (frontend) | |

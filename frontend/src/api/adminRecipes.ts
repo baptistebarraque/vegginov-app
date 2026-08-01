@@ -65,6 +65,18 @@ export async function createRecipe(values: RecipeFormValues): Promise<RecipeDeta
   return response.json() as Promise<RecipeDetail>;
 }
 
+export async function getProteinSourceOptions(): Promise<string[]> {
+  const response = await fetch(`${API_BASE_URL}/admin/protein-sources`, {
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    throw new Error(`List protein source options request failed: ${response.status}`);
+  }
+
+  return response.json() as Promise<string[]>;
+}
+
 export async function listRecipes(): Promise<RecipeListItem[]> {
   const response = await fetch(`${API_BASE_URL}/admin/recipes`, { credentials: "include" });
 
@@ -117,6 +129,21 @@ export async function deleteRecipe(id: number): Promise<void> {
   if (!response.ok) {
     throw new Error(`Delete recipe request failed: ${response.status}`);
   }
+}
+
+// Fetched (rather than a plain <a download>) so the session cookie is sent
+// with the request even though the API is on a different origin; returns the
+// CSV as a Blob the caller can turn into a download.
+export async function exportRecipesCsv(): Promise<Blob> {
+  const response = await fetch(`${API_BASE_URL}/admin/recipes/export`, {
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Export CSV request failed: ${response.status}`);
+  }
+
+  return response.blob();
 }
 
 // Thrown when the backend rejects a CSV import for row-level reasons (a

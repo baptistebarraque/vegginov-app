@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from veggie_app.matching.embeddings import EMBEDDING_DIM
 from veggie_app.models.recipe import Recipe
 from veggie_app.services import recipe_service
-from veggie_app.services.recipe_service import IngredientQuantityError
+from veggie_app.services.recipe_service import IngredientQuantityError, ProteinSourceError
 
 
 def _unit_vector(index: int) -> list[float]:
@@ -45,7 +45,7 @@ def test_get_suggestions_caps_at_suggestion_count(db_session: Session) -> None:
     assert len(suggestions) == recipe_service.SUGGESTION_COUNT
 
 
-def test_get_suggestions_returns_ingredient_names_only(db_session: Session) -> None:
+def test_get_suggestions_returns_ingredients_with_quantities(db_session: Session) -> None:
     ingredients = [
         {"name": "lentilles", "quantity": "200g"},
         {"name": "curry", "quantity": None},
@@ -57,7 +57,39 @@ def test_get_suggestions_returns_ingredient_names_only(db_session: Session) -> N
 
     suggestions = recipe_service.get_suggestions(db_session, "query", [])
 
-    assert suggestions[0].ingredients == ["lentilles", "curry"]
+    assert [(i.name, i.quantity) for i in suggestions[0].ingredients] == [
+        ("lentilles", "200g"),
+        ("curry", None),
+    ]
+
+
+def test_get_suggestions_returns_full_recipe_detail(db_session: Session) -> None:
+    recipe = recipe_service.create_recipe(
+        db_session,
+        title="Curry de lentilles",
+        ingredients=[{"name": "lentilles", "quantity": "200g"}],
+        allergens=["gluten"],
+        prep_time_minutes=30,
+        servings=4,
+        protein_source="lentilles",
+        protein_grams=18.5,
+        instructions=["Faire revenir les oignons"],
+        image_filename="abc123.png",
+    )
+    db_session.flush()
+
+    suggestions = recipe_service.get_suggestions(db_session, "query", [])
+
+    assert len(suggestions) == 1
+    suggestion = suggestions[0]
+    assert suggestion.id == recipe.id
+    assert suggestion.allergens == ["gluten"]
+    assert suggestion.prep_time_minutes == 30
+    assert suggestion.servings == 4
+    assert suggestion.protein_source == "lentilles"
+    assert suggestion.protein_grams == 18.5
+    assert suggestion.instructions == ["Faire revenir les oignons"]
+    assert suggestion.image_url == "/media/abc123.png"
 
 
 def test_create_recipe_persists_with_embedding(db_session: Session) -> None:
@@ -150,6 +182,36 @@ def test_validate_ingredient_quantities_ignores_missing_when_no_servings() -> No
     recipe_service.validate_ingredient_quantities(
         [{"name": "laitue", "quantity": None}], servings=None
     )
+
+
+def test_validate_protein_source_accepts_known_value() -> None:
+    recipe_service.validate_protein_source("tofu")
+
+
+def test_validate_protein_source_accepts_none() -> None:
+    recipe_service.validate_protein_source(None)
+
+
+def test_validate_protein_source_rejects_unknown_value() -> None:
+    with pytest.raises(ProteinSourceError):
+        recipe_service.validate_protein_source("boeuf haché")
+
+
+def test_create_recipe_rejects_unknown_protein_source(db_session: Session) -> None:
+    with pytest.raises(ProteinSourceError):
+        recipe_service.create_recipe(
+            db_session,
+            title="Salade",
+            ingredients=[{"name": "laitue", "quantity": None}],
+            protein_source="steak",
+        )
+
+
+def test_list_protein_source_options_returns_known_vocabulary() -> None:
+    options = recipe_service.list_protein_source_options()
+
+    assert "tofu" in options
+    assert "seitan" in options
 
 
 def test_list_recipes_orders_by_title(db_session: Session) -> None:

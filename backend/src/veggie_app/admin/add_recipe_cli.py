@@ -7,10 +7,11 @@ import logging
 from pathlib import Path
 
 from veggie_app.database import SessionLocal
+from veggie_app.matching.substitution import RECIPE_PROTEIN_VOCABULARY
 from veggie_app.models.recipe import IngredientEntry
 from veggie_app.services import image_service, recipe_service
 from veggie_app.services.image_service import InvalidImageError
-from veggie_app.services.recipe_service import IngredientQuantityError
+from veggie_app.services.recipe_service import IngredientQuantityError, ProteinSourceError
 
 # A dedicated, non-propagating handler (rather than logging.basicConfig, which
 # configures the root logger) so this stays scoped to our own messages: the
@@ -96,6 +97,20 @@ def _prompt_protein_grams() -> float | None:
         return None
 
 
+def _prompt_protein_source() -> str | None:
+    logger.info("Sources de protéines connues : %s", ", ".join(RECIPE_PROTEIN_VOCABULARY))
+    while True:
+        raw = input("Source de protéines (optionnel, l'un des mots ci-dessus) : ").strip()
+        if not raw:
+            return None
+        try:
+            recipe_service.validate_protein_source(raw)
+        except ProteinSourceError as exc:
+            logger.warning("%s", exc)
+            continue
+        return raw
+
+
 def _prompt_instructions() -> list[str]:
     logger.info("Étapes de préparation (optionnel, une étape par ligne, ligne vide pour finir) :")
     steps = []
@@ -126,7 +141,7 @@ def main() -> None:
     ingredients = _prompt_ingredients(servings)
     allergens = _prompt_list("Allergènes (optionnel, séparés par des virgules) : ")
     prep_time_minutes = _prompt_prep_time()
-    protein_source = input("Source de protéines (optionnel) : ").strip() or None
+    protein_source = _prompt_protein_source()
     protein_grams = _prompt_protein_grams()
     instructions = _prompt_instructions()
     image_filename = _prompt_image_filename()

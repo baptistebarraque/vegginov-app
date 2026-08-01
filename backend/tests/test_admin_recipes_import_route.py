@@ -72,3 +72,27 @@ def test_import_reports_row_errors_and_imports_nothing(
     errors = response.json()["detail"]
     assert errors == [{"row": 3, "message": "la colonne 'title' est obligatoire"}]
     assert db_session.execute(select(Recipe)).scalars().all() == []
+
+
+def test_export_requires_admin_session(client: TestClient) -> None:
+    response = client.get("/admin/recipes/export")
+
+    assert response.status_code == 401
+
+
+def test_export_returns_csv_attachment_for_admin(
+    client: TestClient, db_session: Session
+) -> None:
+    _login_as_admin(client, db_session)
+    _upload_csv(client, VALID_CSV)
+
+    response = client.get("/admin/recipes/export")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/csv")
+    assert "attachment" in response.headers["content-disposition"]
+    assert "recipes.csv" in response.headers["content-disposition"]
+    body = response.content.decode("utf-8-sig")
+    assert body.splitlines()[0].startswith("title,ingredients,allergens")
+    assert "Curry" in body
+    assert "Salade" in body
