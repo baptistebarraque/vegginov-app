@@ -99,7 +99,15 @@ function AdminRecipeListPage() {
       />
 
       <main className="pb-24">
-        <h1 className="font-display text-3xl text-craie">Recettes</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="font-display text-3xl text-craie">Recettes</h1>
+          <Link
+            to="/admin"
+            className="text-sm text-pousse transition-colors hover:text-pousse-clair focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pousse"
+          >
+            ← Retour
+          </Link>
+        </div>
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
           <Link
