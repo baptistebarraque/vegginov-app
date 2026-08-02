@@ -11,7 +11,11 @@ from veggie_app.matching.substitution import RECIPE_PROTEIN_VOCABULARY
 from veggie_app.models.recipe import IngredientEntry
 from veggie_app.services import image_service, recipe_service
 from veggie_app.services.image_service import InvalidImageError
-from veggie_app.services.recipe_service import IngredientQuantityError, ProteinSourceError
+from veggie_app.services.recipe_service import (
+    IngredientQuantityError,
+    PriceTierError,
+    ProteinSourceError,
+)
 
 # A dedicated, non-propagating handler (rather than logging.basicConfig, which
 # configures the root logger) so this stays scoped to our own messages: the
@@ -87,7 +91,7 @@ def _prompt_servings() -> int | None:
 
 
 def _prompt_protein_grams() -> float | None:
-    raw = input("Protéines en grammes (optionnel) : ").strip()
+    raw = input("Protéines en grammes par portion (optionnel) : ").strip()
     if not raw:
         return None
     try:
@@ -95,6 +99,38 @@ def _prompt_protein_grams() -> float | None:
     except ValueError:
         logger.warning("Valeur ignorée (nombre attendu).")
         return None
+
+
+def _prompt_calories() -> float | None:
+    raw = input("Calories par portion (optionnel) : ").strip()
+    if not raw:
+        return None
+    try:
+        return float(raw)
+    except ValueError:
+        logger.warning("Valeur ignorée (nombre attendu).")
+        return None
+
+
+def _prompt_price_tier() -> int | None:
+    while True:
+        raw = input(
+            f"Niveau de prix de 1 à {recipe_service.MAX_PRICE_TIER}, "
+            "1 = économique (optionnel) : "
+        ).strip()
+        if not raw:
+            return None
+        try:
+            price_tier = int(raw)
+        except ValueError:
+            logger.warning("Valeur ignorée (nombre entier attendu).")
+            continue
+        try:
+            recipe_service.validate_price_tier(price_tier)
+        except PriceTierError as exc:
+            logger.warning("%s", exc)
+            continue
+        return price_tier
 
 
 def _prompt_protein_source() -> str | None:
@@ -143,6 +179,8 @@ def main() -> None:
     prep_time_minutes = _prompt_prep_time()
     protein_source = _prompt_protein_source()
     protein_grams = _prompt_protein_grams()
+    calories_per_portion = _prompt_calories()
+    price_tier = _prompt_price_tier()
     instructions = _prompt_instructions()
     image_filename = _prompt_image_filename()
 
@@ -158,6 +196,8 @@ def main() -> None:
                 servings=servings,
                 protein_source=protein_source,
                 protein_grams=protein_grams,
+                calories_per_portion=calories_per_portion,
+                price_tier=price_tier,
                 instructions=instructions,
                 image_filename=image_filename,
             )

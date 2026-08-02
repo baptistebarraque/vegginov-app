@@ -23,6 +23,9 @@ class RecipeSuggestion(BaseModel):
     servings: int | None
     protein_source: str | None
     protein_grams: float | None
+    calories_per_portion: float | None
+    price_tier: int | None
+    protein_density: float | None  # grams of protein per 100 kcal, computed
     instructions: list[str]
     image_url: str | None
 
@@ -42,6 +45,9 @@ class RecipeResponse(BaseModel):
     servings: int | None
     protein_source: str | None
     protein_grams: float | None
+    calories_per_portion: float | None
+    price_tier: int | None
+    protein_density: float | None  # grams of protein per 100 kcal, computed
     instructions: list[str]
     image_url: str | None
 

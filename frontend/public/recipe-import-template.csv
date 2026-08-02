@@ -1,3 +1,3 @@
-title,ingredients,allergens,prep_time_minutes,servings,protein_source,protein_grams,instructions
-Curry de lentilles corail,lentilles corail:200g; lait de coco:200ml; curry:1 c.a.s,gluten,25,4,lentilles corail,15,Faire chauffer le lait de coco; Ajouter les lentilles et le curry
-Salade de quinoa,quinoa; tomates; concombre,,15,,,,
+title,ingredients,allergens,prep_time_minutes,servings,protein_source,protein_grams,calories_per_portion,price_tier,instructions
+Curry de lentilles corail,lentilles corail:200g; lait de coco:200ml; curry:1 c.a.s,gluten,25,4,lentilles corail,15,420,2,Faire chauffer le lait de coco; Ajouter les lentilles et le curry
+Salade de quinoa,quinoa; tomates; concombre,,15,,,,,,

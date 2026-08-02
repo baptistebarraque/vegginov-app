@@ -64,6 +64,10 @@ function AdminRecipeForm({
   const [proteinGramsText, setProteinGramsText] = useState(
     initialValues?.proteinGrams?.toString() ?? "",
   );
+  const [caloriesText, setCaloriesText] = useState(
+    initialValues?.caloriesPerPortion?.toString() ?? "",
+  );
+  const [priceTier, setPriceTier] = useState<number | null>(initialValues?.priceTier ?? null);
   const [instructionsText, setInstructionsText] = useState(
     initialValues?.instructions.join("\n") ?? "",
   );
@@ -109,6 +113,7 @@ function AdminRecipeForm({
     const prepTimeMinutes = prepTimeText.trim() ? Number(prepTimeText.trim()) : null;
     const servings = servingsText.trim() ? Number(servingsText.trim()) : null;
     const proteinGrams = proteinGramsText.trim() ? Number(proteinGramsText.trim()) : null;
+    const caloriesPerPortion = caloriesText.trim() ? Number(caloriesText.trim()) : null;
     onSubmit(
       {
         title,
@@ -118,6 +123,8 @@ function AdminRecipeForm({
         servings,
         proteinSource,
         proteinGrams,
+        caloriesPerPortion,
+        priceTier,
         instructions,
         image,
       },
@@ -226,7 +233,7 @@ function AdminRecipeForm({
         options={proteinSourceOptions}
       />
       <label className={labelClassName}>
-        Protéines en grammes (optionnel)
+        Protéines en grammes par portion (optionnel)
         <input
           type="number"
           min={0}
@@ -236,6 +243,33 @@ function AdminRecipeForm({
           placeholder="18.5"
           className={inputClassName}
         />
+      </label>
+      <label className={labelClassName}>
+        Calories par portion (optionnel)
+        <input
+          type="number"
+          min={0}
+          step="any"
+          value={caloriesText}
+          onChange={(event) => setCaloriesText(event.target.value)}
+          placeholder="420"
+          className={inputClassName}
+        />
+      </label>
+      <label className={labelClassName}>
+        Niveau de prix (optionnel)
+        <select
+          value={priceTier === null ? "" : String(priceTier)}
+          onChange={(event) =>
+            setPriceTier(event.target.value === "" ? null : Number(event.target.value))
+          }
+          className={inputClassName}
+        >
+          <option value="">Non précisé</option>
+          <option value="1">€ — économique</option>
+          <option value="2">€€ — intermédiaire</option>
+          <option value="3">€€€ — coûteux</option>
+        </select>
       </label>
       <label className={labelClassName}>
         Étapes de préparation (optionnel, une étape par ligne)

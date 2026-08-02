@@ -27,6 +27,8 @@ describe("AdminRecipeForm", () => {
     await user.type(screen.getByLabelText(/nombre de personnes/i), "4");
     await user.type(screen.getByLabelText(/source de protéines/i), "lentilles corail");
     await user.type(screen.getByLabelText(/protéines en grammes/i), "18.5");
+    await user.type(screen.getByLabelText(/calories par portion/i), "420");
+    await user.selectOptions(screen.getByLabelText(/niveau de prix/i), "2");
     await user.type(
       screen.getByLabelText(/étapes de préparation/i),
       "Faire revenir les oignons{enter}{enter}Ajouter les lentilles et le curry",
@@ -45,6 +47,8 @@ describe("AdminRecipeForm", () => {
         servings: 4,
         proteinSource: "lentilles corail",
         proteinGrams: 18.5,
+        caloriesPerPortion: 420,
+        priceTier: 2,
         instructions: ["Faire revenir les oignons", "Ajouter les lentilles et le curry"],
         image: null,
       },
@@ -84,6 +88,8 @@ describe("AdminRecipeForm", () => {
         servings: null,
         proteinSource: null,
         proteinGrams: null,
+        caloriesPerPortion: null,
+        priceTier: null,
         instructions: [],
         image: null,
       },
@@ -132,6 +138,8 @@ describe("AdminRecipeForm", () => {
     servings: 4,
     proteinSource: "lentilles",
     proteinGrams: 18.5,
+    caloriesPerPortion: 420,
+    priceTier: 2,
     instructions: ["Étape 1"],
     image: null,
   };

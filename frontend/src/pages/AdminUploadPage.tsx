@@ -157,8 +157,10 @@ function AdminUploadPage() {
           <p className="text-sm text-sauge">
             Colonnes : <code>title</code>, <code>ingredients</code> (obligatoires),{" "}
             <code>allergens</code>, <code>prep_time_minutes</code>, <code>servings</code>,{" "}
-            <code>protein_source</code>, <code>protein_grams</code>, <code>instructions</code>{" "}
-            (optionnelles). Dans une cellule, séparez plusieurs valeurs par un point-virgule (
+            <code>protein_source</code>, <code>protein_grams</code>,{" "}
+            <code>calories_per_portion</code>, <code>price_tier</code> (1 à 3),{" "}
+            <code>instructions</code> (optionnelles). Dans une cellule, séparez plusieurs valeurs
+            par un point-virgule (
             <code>;</code>). Pour les ingrédients, ajoutez la quantité après deux-points, ex.{" "}
             <code>riz:200g; curry</code> — obligatoire si <code>servings</code> est renseigné.
           </p>

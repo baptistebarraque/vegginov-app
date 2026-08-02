@@ -26,7 +26,11 @@ from veggie_app.schemas.recipe import (
 from veggie_app.services import auth_service, image_service, recipe_import_service, recipe_service
 from veggie_app.services.image_service import InvalidImageError
 from veggie_app.services.recipe_import_service import CsvImportError
-from veggie_app.services.recipe_service import IngredientQuantityError, ProteinSourceError
+from veggie_app.services.recipe_service import (
+    IngredientQuantityError,
+    PriceTierError,
+    ProteinSourceError,
+)
 
 router = APIRouter(prefix="/admin")
 
@@ -58,6 +62,11 @@ def _to_response(recipe: Recipe) -> RecipeResponse:
         servings=recipe.servings,
         protein_source=recipe.protein_source,
         protein_grams=recipe.protein_grams,
+        calories_per_portion=recipe.calories_per_portion,
+        price_tier=recipe.price_tier,
+        protein_density=recipe_service.compute_protein_density(
+            recipe.protein_grams, recipe.calories_per_portion
+        ),
         instructions=recipe.instructions,
         image_url=image_service.image_url(recipe.image_filename),
     )
@@ -119,6 +128,8 @@ def create_recipe(
     servings: int | None = Form(None),
     protein_source: str | None = Form(None),
     protein_grams: float | None = Form(None),
+    calories_per_portion: float | None = Form(None),
+    price_tier: int | None = Form(None),
     instructions: list[str] = Form([]),
     image: UploadFile | None = File(None),
     db: Session = Depends(get_db),
@@ -143,10 +154,12 @@ def create_recipe(
             servings=servings,
             protein_source=protein_source,
             protein_grams=protein_grams,
+            calories_per_portion=calories_per_portion,
+            price_tier=price_tier,
             instructions=instructions,
             image_filename=image_filename,
         )
-    except (IngredientQuantityError, ProteinSourceError) as exc:
+    except (IngredientQuantityError, ProteinSourceError, PriceTierError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     db.commit()
@@ -163,6 +176,8 @@ def update_recipe(
     servings: int | None = Form(None),
     protein_source: str | None = Form(None),
     protein_grams: float | None = Form(None),
+    calories_per_portion: float | None = Form(None),
+    price_tier: int | None = Form(None),
     instructions: list[str] = Form([]),
     image: UploadFile | None = File(None),
     remove_image: bool = Form(False),
@@ -195,10 +210,12 @@ def update_recipe(
             servings=servings,
             protein_source=protein_source,
             protein_grams=protein_grams,
+            calories_per_portion=calories_per_portion,
+            price_tier=price_tier,
             instructions=instructions,
             image_filename=image_filename,
         )
-    except (IngredientQuantityError, ProteinSourceError) as exc:
+    except (IngredientQuantityError, ProteinSourceError, PriceTierError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     db.commit()

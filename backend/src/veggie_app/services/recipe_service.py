@@ -12,6 +12,10 @@ from veggie_app.services import image_service
 
 SUGGESTION_COUNT = 4
 
+# Cost indicator scale: 1 (cheapest) .. MAX_PRICE_TIER (most expensive),
+# rendered as € symbols in the UI.
+MAX_PRICE_TIER = 3
+
 
 class IngredientQuantityError(ValueError):
     """Raised when servings is set but at least one ingredient has no quantity."""
@@ -19,6 +23,10 @@ class IngredientQuantityError(ValueError):
 
 class ProteinSourceError(ValueError):
     """Raised when protein_source isn't one of RECIPE_PROTEIN_VOCABULARY."""
+
+
+class PriceTierError(ValueError):
+    """Raised when price_tier is outside the 1..MAX_PRICE_TIER range."""
 
 
 def validate_ingredient_quantities(
@@ -50,6 +58,28 @@ def validate_protein_source(protein_source: str | None) -> None:
         )
 
 
+def validate_price_tier(price_tier: int | None) -> None:
+    """price_tier is a coarse cost indicator on a 1..MAX_PRICE_TIER scale
+    (rendered as €/€€/€€€), not a currency amount."""
+    if price_tier is not None and not (1 <= price_tier <= MAX_PRICE_TIER):
+        raise PriceTierError(
+            f"niveau de prix invalide : {price_tier!r} "
+            f"(valeur attendue entre 1 et {MAX_PRICE_TIER})"
+        )
+
+
+def compute_protein_density(
+    protein_grams: float | None, calories_per_portion: float | None
+) -> float | None:
+    """Protein density in grams of protein per 100 kcal — a derived read-only
+    figure (never stored), so calories and protein stay the single source of
+    truth. Returns None unless both inputs are present and calories are
+    positive; rounded to one decimal."""
+    if protein_grams is None or not calories_per_portion:
+        return None
+    return round(protein_grams / calories_per_portion * 100, 1)
+
+
 def list_protein_source_options() -> list[str]:
     return list(RECIPE_PROTEIN_VOCABULARY)
 
@@ -59,14 +89,16 @@ def _prepare_embedding(
     ingredients: list[IngredientEntry],
     servings: int | None,
     protein_source: str | None,
+    price_tier: int | None,
 ) -> list[float]:
-    """Shared by create/update: validates quantities and protein_source, then
-    embeds the recipe's title (the "Title view" — see matching/fusion.py).
-    Ingredient-based similarity is handled separately, at query time, by
+    """Shared by create/update: validates the recipe's fields, then embeds its
+    title (the "Title view" — see matching/fusion.py). Ingredient-based
+    similarity is handled separately, at query time, by
     matching/ingredients_view.py, so ingredient text is deliberately not
     folded into this embedding."""
     validate_ingredient_quantities(ingredients, servings)
     validate_protein_source(protein_source)
+    validate_price_tier(price_tier)
     return embed_text(title)
 
 
@@ -79,10 +111,12 @@ def create_recipe(
     servings: int | None = None,
     protein_source: str | None = None,
     protein_grams: float | None = None,
+    calories_per_portion: float | None = None,
+    price_tier: int | None = None,
     instructions: list[str] | None = None,
     image_filename: str | None = None,
 ) -> Recipe:
-    embedding = _prepare_embedding(title, ingredients, servings, protein_source)
+    embedding = _prepare_embedding(title, ingredients, servings, protein_source, price_tier)
     recipe = Recipe(
         title=title,
         ingredients=ingredients,
@@ -91,6 +125,8 @@ def create_recipe(
         servings=servings,
         protein_source=protein_source,
         protein_grams=protein_grams,
+        calories_per_portion=calories_per_portion,
+        price_tier=price_tier,
         instructions=instructions or [],
         image_filename=image_filename,
         embedding=embedding,
@@ -118,10 +154,12 @@ def update_recipe(
     servings: int | None = None,
     protein_source: str | None = None,
     protein_grams: float | None = None,
+    calories_per_portion: float | None = None,
+    price_tier: int | None = None,
     instructions: list[str] | None = None,
     image_filename: str | None = None,
 ) -> Recipe:
-    embedding = _prepare_embedding(title, ingredients, servings, protein_source)
+    embedding = _prepare_embedding(title, ingredients, servings, protein_source, price_tier)
     recipe.title = title
     recipe.ingredients = ingredients
     recipe.allergens = allergens or []
@@ -129,6 +167,8 @@ def update_recipe(
     recipe.servings = servings
     recipe.protein_source = protein_source
     recipe.protein_grams = protein_grams
+    recipe.calories_per_portion = calories_per_portion
+    recipe.price_tier = price_tier
     recipe.instructions = instructions or []
     recipe.image_filename = image_filename
     recipe.embedding = embedding
@@ -173,6 +213,12 @@ def get_suggestions(db: Session, title: str, ingredients: list[str]) -> list[Rec
             servings=recipes_by_id[recipe_id].servings,
             protein_source=recipes_by_id[recipe_id].protein_source,
             protein_grams=recipes_by_id[recipe_id].protein_grams,
+            calories_per_portion=recipes_by_id[recipe_id].calories_per_portion,
+            price_tier=recipes_by_id[recipe_id].price_tier,
+            protein_density=compute_protein_density(
+                recipes_by_id[recipe_id].protein_grams,
+                recipes_by_id[recipe_id].calories_per_portion,
+            ),
             instructions=recipes_by_id[recipe_id].instructions,
             image_url=image_service.image_url(recipes_by_id[recipe_id].image_filename),
         )

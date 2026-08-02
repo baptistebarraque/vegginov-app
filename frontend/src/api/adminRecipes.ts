@@ -29,6 +29,12 @@ function buildRecipeFormData(values: RecipeFormValues): FormData {
   if (values.proteinGrams !== null) {
     formData.append("protein_grams", String(values.proteinGrams));
   }
+  if (values.caloriesPerPortion !== null) {
+    formData.append("calories_per_portion", String(values.caloriesPerPortion));
+  }
+  if (values.priceTier !== null) {
+    formData.append("price_tier", String(values.priceTier));
+  }
   if (values.image !== null) {
     formData.append("image", values.image);
   }

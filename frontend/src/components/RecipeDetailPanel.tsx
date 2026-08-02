@@ -7,6 +7,11 @@ import type { RecipeSuggestion } from "../types/recipe";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+/** Cost tier (1..3) rendered as €/€€/€€€ — see price_tier on the backend. */
+function priceTierLabel(tier: number): string {
+  return "€".repeat(tier);
+}
+
 interface RecipeDetailPanelProps {
   suggestion: RecipeSuggestion;
   onClose: () => void;
@@ -82,6 +87,32 @@ function RecipeDetailPanel({ suggestion, onClose }: RecipeDetailPanelProps) {
               <>
                 <dt className="font-medium text-sauge">Source de protéines</dt>
                 <dd className="text-craie">{suggestion.protein_source}</dd>
+              </>
+            )}
+            {suggestion.protein_grams !== null && (
+              <>
+                <dt className="font-medium text-sauge">Protéines (par portion)</dt>
+                <dd className="font-mono text-craie">{suggestion.protein_grams} g</dd>
+              </>
+            )}
+            {suggestion.calories_per_portion !== null && (
+              <>
+                <dt className="font-medium text-sauge">Calories (par portion)</dt>
+                <dd className="font-mono text-craie">{suggestion.calories_per_portion} kcal</dd>
+              </>
+            )}
+            {suggestion.protein_density !== null && (
+              <>
+                <dt className="font-medium text-sauge">Densité protéique</dt>
+                <dd className="font-mono text-craie">
+                  {suggestion.protein_density} g / 100 kcal
+                </dd>
+              </>
+            )}
+            {suggestion.price_tier !== null && (
+              <>
+                <dt className="font-medium text-sauge">Prix</dt>
+                <dd className="font-mono text-craie">{priceTierLabel(suggestion.price_tier)}</dd>
               </>
             )}
           </dl>

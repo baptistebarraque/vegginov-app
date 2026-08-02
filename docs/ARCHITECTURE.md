@@ -353,3 +353,35 @@ engines animating the same elements is a bug factory); reading CSS custom
 properties from JS at runtime to avoid the small motion-token duplication
 (rejected — over-engineered; a handful of durations/easings mirrored in one
 file is cheaper and type-safe).
+
+---
+
+## Per-portion nutrition: calories + price tier stored, protein density computed
+
+Date: 2026-08-02
+Context: the admin wanted to record more nutrition on a recipe — calories and
+protein per portion — plus a coarse cost indicator, and to surface protein
+"density". `protein_grams` already existed but without a per-portion meaning.
+Decision:
+- **`protein_grams` is defined as per portion** (relabeled in the CLI/web
+  form, not duplicated). A new `calories_per_portion` (`Float`) joins it; all
+  nutrition figures are per portion, independent of `servings`, so they don't
+  have to be recomputed when servings change.
+- **`price_tier` is a 1..3 integer** (`MAX_PRICE_TIER`), validated in
+  `recipe_service.validate_price_tier` and rendered as €/€€/€€€ in the UI —
+  an ordinal cost band, not a currency amount, so it stays sortable and
+  locale-free in the database.
+- **Protein density is derived, never stored**: `compute_protein_density`
+  returns grams of protein per 100 kcal and is computed on read in every
+  response (create/get/suggestions). Calories and protein stay the single
+  source of truth, so an edit to one can't leave a stored density stale. It is
+  therefore also absent from the CSV import/export format, which only carries
+  stored columns.
+Alternatives considered: storing `protein_density` as a column (rejected —
+invites drift the moment calories or protein is edited without recomputing);
+adding a separate per-portion protein column beside the existing one
+(rejected — two overlapping fields, the old one's meaning still undefined);
+storing price as a currency amount (rejected — over-precise for a POC and
+drags in currency/locale concerns; a 3-band tier is what the UI needs);
+pulling full macros (carbs/fat/fibre) forward (deferred — that is the
+nutritional-scoring work `docs/ROADMAP.md` places in a later phase).

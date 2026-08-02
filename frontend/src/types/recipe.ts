@@ -8,6 +8,9 @@ export interface RecipeSuggestion {
   servings: number | null;
   protein_source: string | null;
   protein_grams: number | null;
+  calories_per_portion: number | null;
+  price_tier: number | null;
+  protein_density: number | null; // grams of protein per 100 kcal, computed by the backend
   instructions: string[];
   image_url: string | null;
 }
@@ -30,6 +33,9 @@ export interface RecipeDetail {
   servings: number | null;
   protein_source: string | null;
   protein_grams: number | null;
+  calories_per_portion: number | null;
+  price_tier: number | null;
+  protein_density: number | null; // grams of protein per 100 kcal, computed by the backend
   instructions: string[];
   image_url: string | null;
 }
@@ -48,6 +54,8 @@ export interface RecipeFormValues {
   servings: number | null;
   proteinSource: string | null;
   proteinGrams: number | null;
+  caloriesPerPortion: number | null;
+  priceTier: number | null;
   instructions: string[];
   image: File | null;
 }

@@ -27,6 +27,8 @@ function toFormValues(recipe: RecipeDetail): RecipeFormValues {
     servings: recipe.servings,
     proteinSource: recipe.protein_source,
     proteinGrams: recipe.protein_grams,
+    caloriesPerPortion: recipe.calories_per_portion,
+    priceTier: recipe.price_tier,
     instructions: recipe.instructions,
     image: null,
   };

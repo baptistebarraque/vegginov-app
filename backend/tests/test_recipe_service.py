@@ -4,7 +4,11 @@ from sqlalchemy.orm import Session
 from veggie_app.matching.embeddings import EMBEDDING_DIM
 from veggie_app.models.recipe import Recipe
 from veggie_app.services import recipe_service
-from veggie_app.services.recipe_service import IngredientQuantityError, ProteinSourceError
+from veggie_app.services.recipe_service import (
+    IngredientQuantityError,
+    PriceTierError,
+    ProteinSourceError,
+)
 
 
 def _unit_vector(index: int) -> list[float]:
@@ -205,6 +209,71 @@ def test_create_recipe_rejects_unknown_protein_source(db_session: Session) -> No
             ingredients=[{"name": "laitue", "quantity": None}],
             protein_source="steak",
         )
+
+
+def test_validate_price_tier_accepts_in_range_and_none() -> None:
+    recipe_service.validate_price_tier(None)
+    recipe_service.validate_price_tier(1)
+    recipe_service.validate_price_tier(recipe_service.MAX_PRICE_TIER)
+
+
+def test_validate_price_tier_rejects_out_of_range() -> None:
+    with pytest.raises(PriceTierError):
+        recipe_service.validate_price_tier(0)
+    with pytest.raises(PriceTierError):
+        recipe_service.validate_price_tier(recipe_service.MAX_PRICE_TIER + 1)
+
+
+def test_compute_protein_density_is_grams_per_100_kcal() -> None:
+    assert recipe_service.compute_protein_density(20.0, 200.0) == 10.0
+
+
+def test_compute_protein_density_is_none_when_inputs_missing_or_zero() -> None:
+    assert recipe_service.compute_protein_density(None, 200.0) is None
+    assert recipe_service.compute_protein_density(20.0, None) is None
+    assert recipe_service.compute_protein_density(20.0, 0.0) is None
+
+
+def test_create_recipe_persists_calories_and_price_tier(db_session: Session) -> None:
+    recipe = recipe_service.create_recipe(
+        db_session,
+        title="Tofu grillé",
+        ingredients=[{"name": "tofu", "quantity": None}],
+        protein_grams=20.0,
+        calories_per_portion=200.0,
+        price_tier=2,
+    )
+
+    assert recipe.calories_per_portion == 200.0
+    assert recipe.price_tier == 2
+
+
+def test_create_recipe_rejects_out_of_range_price_tier(db_session: Session) -> None:
+    with pytest.raises(PriceTierError):
+        recipe_service.create_recipe(
+            db_session,
+            title="Salade",
+            ingredients=[{"name": "laitue", "quantity": None}],
+            price_tier=5,
+        )
+
+
+def test_get_suggestions_computes_protein_density(db_session: Session) -> None:
+    recipe_service.create_recipe(
+        db_session,
+        title="Tofu grillé",
+        ingredients=[{"name": "tofu", "quantity": None}],
+        protein_grams=20.0,
+        calories_per_portion=200.0,
+        price_tier=2,
+    )
+    db_session.flush()
+
+    suggestion = recipe_service.get_suggestions(db_session, "query", [])[0]
+
+    assert suggestion.calories_per_portion == 200.0
+    assert suggestion.price_tier == 2
+    assert suggestion.protein_density == 10.0
 
 
 def test_list_protein_source_options_returns_known_vocabulary() -> None:
