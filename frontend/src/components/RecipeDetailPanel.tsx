@@ -38,7 +38,7 @@ function RecipeDetailPanel({ suggestion, onClose }: RecipeDetailPanelProps) {
           role="dialog"
           aria-modal="true"
           aria-labelledby="recipe-detail-title"
-          className="max-h-full w-full overflow-y-auto rounded-lg border border-lisiere bg-feuille p-6 shadow-[0_1px_2px_rgb(0_0_0/0.4)]"
+          className="max-h-[85vh] w-full overflow-y-auto overscroll-contain rounded-lg border border-lisiere bg-feuille p-6 shadow-[0_1px_2px_rgb(0_0_0/0.4)]"
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
