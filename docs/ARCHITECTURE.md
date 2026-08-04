@@ -385,3 +385,199 @@ storing price as a currency amount (rejected — over-precise for a POC and
 drags in currency/locale concerns; a 3-band tier is what the UI needs);
 pulling full macros (carbs/fat/fibre) forward (deferred — that is the
 nutritional-scoring work `docs/ROADMAP.md` places in a later phase).
+
+---
+
+## User accounts (Phase 4, M1): admin_sessions renamed, email reset deferred
+
+Date: 2026-08-03
+Context: Phase 4 extends the admin-only auth from `docs/ARCHITECTURE.md`'s
+"Admin auth" entry to general (optional) user accounts — the reuse that
+entry explicitly designed for. Two decisions fell out of that extension.
+Decision:
+- **`admin_sessions` renamed to `user_sessions`** (model `AdminSession` →
+  `UserSession`, migration `a661cd964978` uses `op.rename_table` so existing
+  sessions survive, not drop+recreate). The table was never admin-specific
+  at the schema level — only `require_admin`'s extra `is_admin` check was —
+  so keeping the old name once regular users log in through it too would be
+  actively misleading. `require_admin` is now `require_user` (any valid
+  session) plus an `is_admin` check layered on top via
+  `Depends(require_user)`, instead of duplicating the cookie/session-lookup
+  logic.
+- **Every new `user_id` FK uses `ondelete="CASCADE"`** (`user_sessions`,
+  `password_reset_tokens`, and every M2–M4 table planned after this one) —
+  deleting an account must not leave orphan rows or fail on a DB constraint.
+  `auth_service.register_user`/`update_account` wrap their insert/update in
+  `db.begin_nested()` (a SAVEPOINT) rather than catching `IntegrityError`
+  and calling the bare session `db.rollback()` — the latter unwinds the
+  *entire* transaction, not just the failed statement, which is fragile the
+  moment a caller does other work in the same session first (and broke the
+  test fixture's own transaction bookkeeping in practice — see
+  `join_transaction_mode="create_savepoint"` in `backend/tests/conftest.py`).
+- **Password reset has no real email delivery yet**: there is no
+  SMTP/mail dependency anywhere in this project (same "add it when actually
+  needed" reasoning as the embeddings model and image storage choices).
+  `POST /auth/password-reset/request` generates a token exactly like a
+  login session (sha256-hashed at rest, 1h expiry, single-use, deleted on
+  consumption) but returns the raw token/link directly in the JSON response
+  instead of emailing it; the frontend just displays it inline. This is a
+  **known gap that must close before any real deployment** — email
+  enumeration is already guarded (the endpoint always returns 200), but
+  handing the token to whoever asked for it, instead of only the account
+  owner's inbox, is a placeholder, not a security-reviewed design.
+Alternatives considered: drop-and-recreate the sessions table under the new
+name (rejected — needlessly logs out every admin session on deploy for no
+benefit, `rename_table` is just as easy); adding SMTP now (rejected per
+explicit user decision — no mail infra exists yet and this app has no other
+external-service dependency to justify adding one before it's load-bearing);
+catching `IntegrityError` with a plain `db.rollback()` (rejected after it
+surfaced a SAWarning in tests — see above).
+
+---
+
+## User preferences (Phase 4, M2): optional auth, hard allergen exclusion only
+
+Date: 2026-08-04
+Context: Phase 4's preference profile (calorie orientation, diet, allergens,
+price range) needs to apply to `/suggestions` — a public, previously fully
+anonymous endpoint — without making accounts stop being optional.
+Decision:
+- **`GET`/`PUT /preferences`** are the only account-gated routes here (both
+  `require_user`, any role). One row per user in `user_preferences`
+  (`models/user_preference.py`), created lazily on first `PUT` rather than
+  at signup — matches "optional" all the way down, no empty row created
+  just because someone made an account.
+- **Enum values are plain strings validated in `preference_service.py`**
+  (`calorie_orientation`: `low`/`balanced`/`high`; `diet`: `omnivore`/
+  `vegetarian`/`pescatarian`/`vegan`), not a Postgres `ENUM` type — matches
+  how `protein_source`/`price_tier` are already validated in
+  `recipe_service.py` (Python-level check, plain column) rather than
+  introducing a second validation mechanism. `price_range` reuses the
+  existing recipes `price_tier` 1..3 scale directly instead of a new one.
+  `allergens` stays free-form text (`ARRAY(String)`), matching
+  `Recipe.allergens` — recipes don't constrain allergens to a fixed
+  vocabulary either, so a preference dropdown would just invent a list nothing
+  else on the backend recognizes.
+- **`/suggestions` gained *optional* auth**: `auth_service.get_optional_user`
+  reads the session cookie if present and returns `None` instead of raising
+  401 when it's missing or invalid, unlike `require_user`. The route applies
+  the caller's saved allergen list only when logged in and
+  `ignore_preferences` (new `SuggestionRequest` field) is false; anonymous
+  requests are completely unaffected. `api/suggestions.ts` on the frontend
+  had to start sending `credentials: "include"` for this to reach the
+  backend at all — it didn't before, since the endpoint had no session
+  concept until now.
+- **Allergens are the only preference actually applied to ranking**, and as
+  a hard pre-ranking exclusion (`recipe_service.get_suggestions`'
+  `excluded_allergens` filters the candidate list before `rank_candidates`
+  runs), never a soft down-rank — this is the literal rule in the GitHub
+  issue driving Phase 4. Diet and calorie orientation are stored but not yet
+  read by ranking; wiring them in is a scoring-design decision (how to blend
+  a soft preference into the existing similarity/protein fusion score)
+  deliberately deferred rather than bolted on ad hoc here.
+Alternatives considered: a Postgres `ENUM` type for calorie_orientation/diet
+(rejected — inconsistent with the existing `protein_source`/`price_tier`
+validation style, and harder to extend without a migration if the vocabulary
+grows); requiring login for `/suggestions` when preferences should apply
+(rejected — breaks "optional accounts" for the one endpoint that matters
+most); soft-weighting allergens instead of excluding (rejected — contradicts
+the issue's explicit "hidden or explicitly flagged, never silently ranked
+lower" rule).
+
+## Price budget (hard filter) + calorie orientation (soft nudge) in ranking
+
+Date: 2026-08-04
+Context: Following the M2 entry above, which stored `price_range` and
+`calorie_orientation` but left them unread by ranking, `/suggestions` now
+applies both. They are treated differently on purpose — the two preferences
+are different *kinds* of constraint.
+Decision:
+- **Price is a hard pre-ranking filter**, alongside the allergen exclusion in
+  `recipe_service.get_suggestions`. A recipe is kept when
+  `price_tier <= max_price_tier`; a recipe priced above the budget is dropped
+  outright (a budget must not be silently overspent), matching the allergen
+  filter's "exclude, never down-rank" shape. Two deliberate edge cases:
+  - `max_price_tier == MAX_PRICE_TIER` (€€€) is **indifferent** — every recipe
+    fits the top tier — so the filter pass is skipped entirely there.
+  - Recipes with **no `price_tier` yet are kept**, not dropped, so results
+    don't collapse while the price/CIQUAL backfill is still in progress. Once
+    every recipe is priced this could be tightened to exclude unknowns.
+- **Calorie orientation is a soft ranking nudge**, not a filter — calories are
+  a continuum and a strong taste match sitting just over a bucket boundary
+  shouldn't be pruned. It lives in the pure `matching/` layer:
+  `matching/nutrition_view.py`'s `calorie_orientation_score` buckets a recipe's
+  `calories_per_portion` (`< LOW_MAX` low, `> HIGH_MIN` high, else balanced)
+  and scores the match 1.0 / 0.5 / 0.0 for same / adjacent / opposite bucket.
+  `matching/fusion.py` blends it onto the title+ingredients similarity with a
+  small `CALORIE_WEIGHT` (0.15) so similarity stays dominant and the nudge
+  mostly breaks ties. Bucket thresholds and the weight are module constants,
+  tunable once real nutrition data and judged pairs exist.
+- **Both terms are a strict superset of prior behavior.** When
+  `calorie_orientation is None`, `fusion.apply_calorie_orientation` returns the
+  similarity untouched (not a neutral-blended value), so anonymous and
+  indifferent users get byte-identical scores and ordering. A recipe with no
+  `calories_per_portion` scores the neutral 0.5 rather than 0, so un-populated
+  recipes aren't buried. The route reads `price_range`/`calorie_orientation`
+  from the caller's saved preferences under the same `ignore_preferences` gate
+  as allergens.
+- **No migration**: `recipes.price_tier`/`calories_per_portion` and
+  `user_preferences.price_range`/`calorie_orientation` all already existed
+  (M2) — this change is ranking logic only. Populating `calories_per_portion`
+  from the CIQUAL database is a separate data track; until then the calorie
+  nudge scores everything neutral and the price filter only bites on
+  already-priced recipes.
+Alternatives considered: making calorie orientation a hard bucket filter
+(rejected — over-prunes strong taste matches and risks empty results while
+calorie data is sparse; user chose the soft nudge); excluding unpriced recipes
+under a budget (rejected for now — same sparse-data risk; user chose lenient);
+folding the calorie term into the existing title/ingredient `fuse_scores`
+weights (rejected — keeping it a second-level blend leaves the title/ingredient
+weighting untouched and independently tunable).
+
+---
+
+## Watchlist (Phase 4, M3): idempotent add/remove, is_watchlisted computed per request
+
+Date: 2026-08-04
+Context: the "save for later" watchlist (`docs/ROADMAP.md` Phase 4, GitHub
+issue section 3) needed add/remove/list plus a way for recipe cards to show
+saved state, without adding a second round-trip per card.
+Decision:
+- **One row per (user, recipe)** in `watchlist_entries`
+  (`models/watchlist_entry.py`), unique on `(user_id, recipe_id)`, both FKs
+  `ondelete="CASCADE"` (same rule as every M1–M2 table: deleting an account
+  or a recipe must not orphan rows or hit a DB constraint).
+- **Add and remove are idempotent**, not strict create-once/delete-once:
+  saving an already-saved recipe returns the existing entry instead of
+  raising or duplicating; removing an absent entry is a silent no-op
+  (`watchlist_service.add`/`remove`). This matches the frontend's single
+  toggle button — a double-click or a stale UI state should never surface an
+  error, since the end state ("saved" or "not saved") is unambiguous either
+  way. `DELETE /watchlist/{recipe_id}` returns `204` unconditionally for the
+  same reason.
+- **`list_for_user` orders by `id DESC`, not `created_at DESC`**: within one
+  Postgres transaction `now()` is frozen at transaction start, so entries
+  added back-to-back in the same transaction (as the test suite does) tie on
+  `created_at` and sort arbitrarily. `id` is monotonic per insert regardless
+  of transaction timing, so it's the correct tiebreak — caught by a failing
+  test (`test_list_for_user_orders_most_recent_first`), not by inspection.
+- **`RecipeSuggestion.is_watchlisted`** is computed once per `/suggestions`
+  call (`watchlist_service.watchlisted_recipe_ids` — one query for every
+  candidate recipe's membership, not one query per recipe) rather than the
+  frontend making a second request per card. Defaults to `false` for
+  anonymous callers, mirroring `get_optional_user`'s existing optional-auth
+  shape from M2. `RecipeResponse` (the admin create/edit/detail shape) does
+  **not** get this field — an admin editing a recipe isn't the "browse and
+  save for later" flow the issue describes, so it would be a field with no
+  real UI use there.
+- **Frontend**: `WatchlistButton` renders as a DOM *sibling* of
+  `RecipeSuggestionCard`'s button, not nested inside it — two interactive
+  elements can't nest in valid HTML, and the card's whole surface is already
+  a `<button>` that opens the detail panel on click/hover.
+Alternatives considered: raising a 409 on duplicate add / 404 on double
+remove (rejected — turns a harmless double-click into a surfaced error the
+frontend would have to swallow anyway); a separate `GET
+/watchlist/{recipe_id}/status` endpoint for card state (rejected — exactly
+the N+1-per-card round trip `is_watchlisted` avoids); storing
+`is_watchlisted` on `RecipeResponse` too (rejected — no admin-flow use for
+it, see above).

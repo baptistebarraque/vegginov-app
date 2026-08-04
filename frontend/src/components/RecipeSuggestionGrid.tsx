@@ -11,6 +11,8 @@ const NEUTRAL_TRACK = "1fr";
 
 interface RecipeSuggestionGridProps {
   suggestions: RecipeSuggestion[];
+  /** Omitted entirely (no watchlist button rendered anywhere) when anonymous. */
+  onToggleWatchlist?: (recipeId: number) => void;
 }
 
 // Sizes the 2 tracks on one axis: the active index gets 75% of the axis,
@@ -50,7 +52,7 @@ function useCanHover(): boolean {
   return canHover;
 }
 
-function RecipeSuggestionGrid({ suggestions }: RecipeSuggestionGridProps) {
+function RecipeSuggestionGrid({ suggestions, onToggleWatchlist }: RecipeSuggestionGridProps) {
   const [hoveredId, setHoveredId] = useState<number | null>(null);
   const [openId, setOpenId] = useState<number | null>(null);
   const canHover = useCanHover();
@@ -158,6 +160,9 @@ function RecipeSuggestionGrid({ suggestions }: RecipeSuggestionGridProps) {
                   ? "Toucher à nouveau pour voir la recette"
                   : undefined
               }
+              onToggleWatchlist={
+                onToggleWatchlist ? () => onToggleWatchlist(suggestion.id) : undefined
+              }
             />
           </motion.div>
         ))}
@@ -169,6 +174,9 @@ function RecipeSuggestionGrid({ suggestions }: RecipeSuggestionGridProps) {
             key="recipe-detail-panel"
             suggestion={openSuggestion}
             onClose={closeDetail}
+            onToggleWatchlist={
+              onToggleWatchlist ? () => onToggleWatchlist(openSuggestion.id) : undefined
+            }
           />
         )}
       </AnimatePresence>

@@ -13,6 +13,7 @@ export interface RecipeSuggestion {
   protein_density: number | null; // grams of protein per 100 kcal, computed by the backend
   instructions: string[];
   image_url: string | null;
+  is_watchlisted: boolean;
 }
 
 export interface SuggestionResponse {

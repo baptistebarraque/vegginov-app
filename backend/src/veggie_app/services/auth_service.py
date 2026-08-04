@@ -1,9 +1,10 @@
-"""Admin authentication: password hashing, session issuing/validation.
+"""Authentication: password hashing, session issuing/validation, account
+management.
 
-resolve_session() is kept separate from require_admin() so session
-resolution can be tested directly with a DB session, without needing to
-fabricate a FastAPI Request — require_admin() is the thin, FastAPI-specific
-wrapper that routes actually depend on.
+resolve_session() is kept separate from require_user()/require_admin() so
+session resolution can be tested directly with a DB session, without
+needing to fabricate a FastAPI Request — require_user()/require_admin() are
+the thin, FastAPI-specific wrappers routes actually depend on.
 """
 
 import hashlib
@@ -13,21 +14,38 @@ from datetime import UTC, datetime, timedelta
 import bcrypt
 from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy import delete, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from veggie_app.database import get_db
-from veggie_app.models.admin_session import AdminSession
+from veggie_app.models.password_reset_token import PasswordResetToken
 from veggie_app.models.user import User
+from veggie_app.models.user_session import UserSession
 
 SESSION_COOKIE_NAME = "session_token"
 SESSION_DURATION = timedelta(days=7)
+RESET_TOKEN_DURATION = timedelta(hours=1)
 
 
-def create_admin(db: Session, email: str, password: str) -> User:
-    password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-    user = User(email=email, password_hash=password_hash, is_admin=True)
-    db.add(user)
-    db.flush()
+class EmailAlreadyRegisteredError(Exception):
+    pass
+
+
+def _hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def register_user(db: Session, email: str, password: str, *, is_admin: bool = False) -> User:
+    user = User(email=email, password_hash=_hash_password(password), is_admin=is_admin)
+    # A SAVEPOINT, not db.rollback(): rolling back the whole session would
+    # also discard any other pending work a caller made in this same
+    # transaction before calling register_user, not just this failed insert.
+    try:
+        with db.begin_nested():
+            db.add(user)
+            db.flush()
+    except IntegrityError as exc:
+        raise EmailAlreadyRegisteredError from exc
     return user
 
 
@@ -46,7 +64,7 @@ def _hash_token(raw_token: str) -> str:
 
 def create_session(db: Session, user: User) -> str:
     raw_token = secrets.token_urlsafe(32)
-    session = AdminSession(
+    session = UserSession(
         user_id=user.id,
         token_hash=_hash_token(raw_token),
         expires_at=datetime.now(UTC) + SESSION_DURATION,
@@ -62,7 +80,7 @@ def resolve_session(db: Session, raw_token: str) -> User | None:
     Does not check is_admin — require_admin() does that on top of this.
     """
     session = db.execute(
-        select(AdminSession).where(AdminSession.token_hash == _hash_token(raw_token))
+        select(UserSession).where(UserSession.token_hash == _hash_token(raw_token))
     ).scalar_one_or_none()
     if session is None or session.expires_at < datetime.now(UTC):
         return None
@@ -70,14 +88,79 @@ def resolve_session(db: Session, raw_token: str) -> User | None:
 
 
 def delete_session(db: Session, raw_token: str) -> None:
-    db.execute(delete(AdminSession).where(AdminSession.token_hash == _hash_token(raw_token)))
+    db.execute(delete(UserSession).where(UserSession.token_hash == _hash_token(raw_token)))
 
 
-def require_admin(request: Request, db: Session = Depends(get_db)) -> User:
+def require_user(request: Request, db: Session = Depends(get_db)) -> User:
     raw_token = request.cookies.get(SESSION_COOKIE_NAME)
     user = resolve_session(db, raw_token) if raw_token else None
     if user is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Authentification requise")
+    return user
+
+
+def require_admin(user: User = Depends(require_user)) -> User:
     if not user.is_admin:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Accès réservé aux administrateurs")
     return user
+
+
+def get_optional_user(request: Request, db: Session = Depends(get_db)) -> User | None:
+    """Like require_user(), but returns None instead of raising 401 — for
+    routes usable both logged-out and logged-in (e.g. /suggestions), where a
+    session only changes behaviour (applying preferences), never gates access.
+    """
+    raw_token = request.cookies.get(SESSION_COOKIE_NAME)
+    return resolve_session(db, raw_token) if raw_token else None
+
+
+def create_reset_token(db: Session, user: User) -> str:
+    raw_token = secrets.token_urlsafe(32)
+    reset_token = PasswordResetToken(
+        user_id=user.id,
+        token_hash=_hash_token(raw_token),
+        expires_at=datetime.now(UTC) + RESET_TOKEN_DURATION,
+    )
+    db.add(reset_token)
+    db.flush()
+    return raw_token
+
+
+def consume_reset_token(db: Session, raw_token: str, new_password: str) -> User | None:
+    """Validates a reset token, applies the new password, and deletes the
+    token so it can't be reused. Returns None (no-op) if the token is
+    missing/expired.
+    """
+    token_hash = _hash_token(raw_token)
+    reset_token = db.execute(
+        select(PasswordResetToken).where(PasswordResetToken.token_hash == token_hash)
+    ).scalar_one_or_none()
+    if reset_token is None or reset_token.expires_at < datetime.now(UTC):
+        return None
+    user = db.get(User, reset_token.user_id)
+    if user is None:
+        return None
+    user.password_hash = _hash_password(new_password)
+    db.execute(delete(PasswordResetToken).where(PasswordResetToken.token_hash == token_hash))
+    db.flush()
+    return user
+
+
+def update_account(
+    db: Session, user: User, *, email: str | None, password: str | None
+) -> User:
+    if email is not None:
+        user.email = email
+    if password is not None:
+        user.password_hash = _hash_password(password)
+    try:
+        with db.begin_nested():
+            db.flush()
+    except IntegrityError as exc:
+        raise EmailAlreadyRegisteredError from exc
+    return user
+
+
+def delete_account(db: Session, user: User) -> None:
+    db.delete(user)
+    db.flush()

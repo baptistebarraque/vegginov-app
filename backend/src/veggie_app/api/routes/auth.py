@@ -1,19 +1,56 @@
-"""POST /auth/login, /auth/logout, GET /auth/me.
+"""POST /auth/login, /auth/signup, /auth/logout, GET /auth/me,
+password-reset request/confirm, account update/delete.
 
-Validate input, call the service, serialize output. Session-cookie
-mechanics (set_cookie/delete_cookie) live here since they're an HTTP
-concern, not business logic.
+Session-cookie mechanics (set_cookie/delete_cookie) live here since they're
+an HTTP concern, not business logic.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from veggie_app.database import get_db
 from veggie_app.models.user import User
-from veggie_app.schemas.auth import LoginRequest, StatusResponse, UserResponse
+from veggie_app.schemas.auth import (
+    ConfirmPasswordResetRequest,
+    LoginRequest,
+    RequestPasswordResetRequest,
+    RequestPasswordResetResponse,
+    SignupRequest,
+    StatusResponse,
+    UpdateAccountRequest,
+    UserResponse,
+)
 from veggie_app.services import auth_service
+from veggie_app.services.auth_service import EmailAlreadyRegisteredError
 
 router = APIRouter(prefix="/auth")
+
+
+def _set_session_cookie(response: Response, token: str) -> None:
+    response.set_cookie(
+        auth_service.SESSION_COOKIE_NAME,
+        token,
+        httponly=True,
+        samesite="lax",
+        secure=False,  # local dev over http://localhost; must be True behind HTTPS
+        max_age=int(auth_service.SESSION_DURATION.total_seconds()),
+    )
+
+
+@router.post("/signup", response_model=UserResponse)
+def signup(
+    request: SignupRequest, response: Response, db: Session = Depends(get_db)
+) -> UserResponse:
+    try:
+        user = auth_service.register_user(db, request.email, request.password, is_admin=False)
+    except EmailAlreadyRegisteredError as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Cet email est déjà utilisé") from exc
+
+    token = auth_service.create_session(db, user)
+    db.commit()
+    _set_session_cookie(response, token)
+    return UserResponse(email=user.email, is_admin=user.is_admin)
 
 
 @router.post("/login", response_model=UserResponse)
@@ -26,16 +63,8 @@ def login(
 
     token = auth_service.create_session(db, user)
     db.commit()
-
-    response.set_cookie(
-        auth_service.SESSION_COOKIE_NAME,
-        token,
-        httponly=True,
-        samesite="lax",
-        secure=False,  # local dev over http://localhost; must be True behind HTTPS
-        max_age=int(auth_service.SESSION_DURATION.total_seconds()),
-    )
-    return UserResponse(email=user.email)
+    _set_session_cookie(response, token)
+    return UserResponse(email=user.email, is_admin=user.is_admin)
 
 
 @router.post("/logout", response_model=StatusResponse)
@@ -51,5 +80,64 @@ def logout(
 
 
 @router.get("/me", response_model=UserResponse)
-def me(user: User = Depends(auth_service.require_admin)) -> UserResponse:
-    return UserResponse(email=user.email)
+def me(user: User = Depends(auth_service.require_user)) -> UserResponse:
+    return UserResponse(email=user.email, is_admin=user.is_admin)
+
+
+@router.post("/password-reset/request", response_model=RequestPasswordResetResponse)
+def request_password_reset(
+    request: RequestPasswordResetRequest, db: Session = Depends(get_db)
+) -> RequestPasswordResetResponse:
+    user = db.execute(select(User).where(User.email == request.email)).scalar_one_or_none()
+    if user is None:
+        # Same response whether or not the email exists, so this endpoint
+        # can't be used to enumerate registered accounts.
+        return RequestPasswordResetResponse(status="ok")
+
+    token = auth_service.create_reset_token(db, user)
+    db.commit()
+    # No email-sending infra yet (see docs/ARCHITECTURE.md) — hand the raw
+    # token back directly instead of emailing a link. Must change before any
+    # real deployment.
+    return RequestPasswordResetResponse(status="ok", reset_token=token)
+
+
+@router.post("/password-reset/confirm", response_model=StatusResponse)
+def confirm_password_reset(
+    request: ConfirmPasswordResetRequest, db: Session = Depends(get_db)
+) -> StatusResponse:
+    user = auth_service.consume_reset_token(db, request.token, request.new_password)
+    if user is None:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "Lien de réinitialisation invalide ou expiré"
+        )
+    db.commit()
+    return StatusResponse(status="ok")
+
+
+@router.patch("/account", response_model=UserResponse)
+def update_account(
+    request: UpdateAccountRequest,
+    user: User = Depends(auth_service.require_user),
+    db: Session = Depends(get_db),
+) -> UserResponse:
+    try:
+        user = auth_service.update_account(
+            db, user, email=request.email, password=request.password
+        )
+    except EmailAlreadyRegisteredError as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Cet email est déjà utilisé") from exc
+    db.commit()
+    return UserResponse(email=user.email, is_admin=user.is_admin)
+
+
+@router.delete("/account", response_model=StatusResponse)
+def delete_account(
+    response: Response,
+    user: User = Depends(auth_service.require_user),
+    db: Session = Depends(get_db),
+) -> StatusResponse:
+    auth_service.delete_account(db, user)
+    db.commit()
+    response.delete_cookie(auth_service.SESSION_COOKIE_NAME)
+    return StatusResponse(status="ok")

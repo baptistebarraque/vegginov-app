@@ -6,6 +6,9 @@ from pydantic import BaseModel, Field
 class SuggestionRequest(BaseModel):
     title: str
     ingredients: list[str] = Field(default_factory=list)
+    # When a session cookie is present, allergen exclusion from the user's
+    # preferences is applied by default; set true to see everything anyway.
+    ignore_preferences: bool = False
 
 
 class IngredientEntrySchema(BaseModel):
@@ -28,6 +31,7 @@ class RecipeSuggestion(BaseModel):
     protein_density: float | None  # grams of protein per 100 kcal, computed
     instructions: list[str]
     image_url: str | None
+    is_watchlisted: bool  # false (never null) when the caller is anonymous
 
 
 class SuggestionResponse(BaseModel):

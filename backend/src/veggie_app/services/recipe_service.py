@@ -181,21 +181,53 @@ def delete_recipe(db: Session, recipe: Recipe) -> None:
     db.flush()
 
 
-def get_suggestions(db: Session, title: str, ingredients: list[str]) -> list[RecipeSuggestion]:
+def get_suggestions(
+    db: Session,
+    title: str,
+    ingredients: list[str],
+    excluded_allergens: list[str] | None = None,
+    watchlisted_recipe_ids: set[int] | None = None,
+    max_price_tier: int | None = None,
+    calorie_orientation: str | None = None,
+) -> list[RecipeSuggestion]:
     query_title_embedding = embed_text(title)
 
     recipes = db.execute(select(Recipe)).scalars().all()
+    if excluded_allergens:
+        # Hard exclusion, applied before ranking — a declared allergen never
+        # just soft-ranks a recipe lower (docs/ROADMAP.md Phase 4 preferences).
+        excluded = set(excluded_allergens)
+        recipes = [recipe for recipe in recipes if not excluded.intersection(recipe.allergens)]
+
+    if max_price_tier is not None and max_price_tier < MAX_PRICE_TIER:
+        # Hard budget cap, applied before ranking like the allergen filter. A
+        # recipe priced above the user's budget is excluded outright; the top
+        # tier (MAX_PRICE_TIER) means "indifferent" — every recipe fits — so we
+        # skip the pass entirely there. Recipes with no price_tier yet (data not
+        # populated) are kept, not dropped, so results don't collapse while the
+        # CIQUAL/price backfill is still in progress.
+        recipes = [
+            recipe
+            for recipe in recipes
+            if recipe.price_tier is None or recipe.price_tier <= max_price_tier
+        ]
+
     candidates = [
         CandidateRecipe(
             id=recipe.id,
             title_embedding=recipe.embedding,
             ingredient_names=[ingredient["name"] for ingredient in recipe.ingredients],
             protein_source=recipe.protein_source,
+            calories_per_portion=recipe.calories_per_portion,
         )
         for recipe in recipes
     ]
     ranked = rank_candidates(
-        query_title_embedding, ingredients, candidates, top_k=SUGGESTION_COUNT
+        query_title_embedding,
+        ingredients,
+        candidates,
+        top_k=SUGGESTION_COUNT,
+        calorie_orientation=calorie_orientation,
     )
 
     recipes_by_id = {recipe.id: recipe for recipe in recipes}
@@ -221,6 +253,7 @@ def get_suggestions(db: Session, title: str, ingredients: list[str]) -> list[Rec
             ),
             instructions=recipes_by_id[recipe_id].instructions,
             image_url=image_service.image_url(recipes_by_id[recipe_id].image_filename),
+            is_watchlisted=bool(watchlisted_recipe_ids) and recipe_id in watchlisted_recipe_ids,
         )
         for recipe_id, score in ranked
     ]

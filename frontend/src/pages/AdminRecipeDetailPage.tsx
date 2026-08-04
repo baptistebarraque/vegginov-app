@@ -6,14 +6,14 @@ import {
   getRecipe,
   updateRecipe,
 } from "../api/adminRecipes";
-import { getCurrentAdmin, logout } from "../api/auth";
+import { logout } from "../api/auth";
 import AdminRecipeForm from "../components/AdminRecipeForm";
 import { AppShell } from "../components/AppShell";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { Header } from "../components/Header";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
-import type { AdminUser } from "../types/auth";
+import { useSession } from "../hooks/useSession";
 import type { RecipeDetail, RecipeFormValues } from "../types/recipe";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -37,8 +37,7 @@ function toFormValues(recipe: RecipeDetail): RecipeFormValues {
 function AdminRecipeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const recipeId = Number(id);
-  const [admin, setAdmin] = useState<AdminUser | null>(null);
-  const [isCheckingSession, setIsCheckingSession] = useState(true);
+  const { user: admin, isChecking: isCheckingSession } = useSession({ requireAdmin: true });
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
   const [proteinSourceOptions, setProteinSourceOptions] = useState<string[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -49,17 +48,6 @@ function AdminRecipeDetailPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    getCurrentAdmin().then((current) => {
-      if (current === null) {
-        navigate("/admin/login");
-      } else {
-        setAdmin(current);
-        setIsCheckingSession(false);
-      }
-    });
-  }, [navigate]);
 
   useEffect(() => {
     if (admin === null) {

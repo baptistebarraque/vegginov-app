@@ -6,7 +6,7 @@ import {
   getProteinSourceOptions,
   importRecipesCsv,
 } from "../api/adminRecipes";
-import { getCurrentAdmin, logout } from "../api/auth";
+import { logout } from "../api/auth";
 import AdminCsvImportForm from "../components/AdminCsvImportForm";
 import AdminRecipeForm from "../components/AdminRecipeForm";
 import { AppShell } from "../components/AppShell";
@@ -14,14 +14,13 @@ import { Header } from "../components/Header";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { Eyebrow } from "../components/ui/Eyebrow";
-import type { AdminUser } from "../types/auth";
+import { useSession } from "../hooks/useSession";
 import type { CsvImportRowError, RecipeFormValues } from "../types/recipe";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 function AdminUploadPage() {
-  const [admin, setAdmin] = useState<AdminUser | null>(null);
-  const [isCheckingSession, setIsCheckingSession] = useState(true);
+  const { user: admin, isChecking: isCheckingSession } = useSession({ requireAdmin: true });
   const [proteinSourceOptions, setProteinSourceOptions] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,17 +31,6 @@ function AdminUploadPage() {
   const [importRowErrors, setImportRowErrors] = useState<CsvImportRowError[]>([]);
   const [importSuccessMessage, setImportSuccessMessage] = useState<string | null>(null);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    getCurrentAdmin().then((current) => {
-      if (current === null) {
-        navigate("/admin/login");
-      } else {
-        setAdmin(current);
-        setIsCheckingSession(false);
-      }
-    });
-  }, [navigate]);
 
   useEffect(() => {
     if (admin === null) {

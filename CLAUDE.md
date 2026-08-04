@@ -27,6 +27,16 @@ the admin web interface after logging in (session-cookie auth; see the
 or in bulk via CSV import. The admin can also list every recipe, and view,
 edit, or delete any of them from the web interface.
  
+**Phase 4 — User accounts (in progress).** M1 (authentication & account:
+signup/login/logout, password reset, account settings/delete), M2 (user
+preferences: calorie orientation, diet, allergens, price range; applied to
+`/suggestions` — allergens and price as a hard exclusion, calorie orientation
+as a soft ranking nudge — with an "ignore my preferences" opt-out), and M3
+(watchlist: save/remove a recipe, notes + planned date, `is_watchlisted` on
+every suggestion) have landed — see the "User accounts", "User preferences",
+"Price budget + calorie orientation", and "Watchlist" architecture entries
+below. Likes (M4) is not built yet.
+
 Do not implement features from later phases unless explicitly requested.
 See `docs/ROADMAP.md` for the full phase breakdown.
  
@@ -83,20 +93,30 @@ veggie-app/
 │       ├── database.py                # engine, session, get_db dependency
 │       ├── models/                    # SQLAlchemy tables only
 │       │   ├── recipe.py
-│       │   ├── user.py                # admin login now; general accounts in phase 4
-│       │   └── admin_session.py        # opaque session tokens (hashed at rest)
+│       │   ├── user.py                # admin + general accounts (phase 4)
+│       │   ├── user_session.py         # opaque session tokens (hashed at rest)
+│       │   ├── password_reset_token.py # opaque reset tokens (hashed at rest)
+│       │   ├── user_preference.py      # one row per user (phase 4 M2)
+│       │   └── watchlist_entry.py      # one row per (user, recipe) (phase 4 M3)
 │       ├── schemas/                    # Pydantic request/response models only
 │       │   ├── recipe.py
-│       │   └── auth.py
+│       │   ├── auth.py
+│       │   ├── preference.py
+│       │   └── watchlist.py
 │       ├── matching/                   # pure similarity logic, no FastAPI/DB deps
 │       │   ├── embeddings.py
-│       │   └── similarity.py
+│       │   ├── similarity.py
+│       │   └── nutrition_view.py       # calorie-orientation soft ranking nudge
 │       ├── services/                   # business logic / orchestration
 │       │   ├── recipe_service.py
-│       │   └── auth_service.py
+│       │   ├── auth_service.py
+│       │   ├── preference_service.py
+│       │   └── watchlist_service.py
 │       ├── api/routes/                 # thin routes only
-│       │   ├── suggestions.py          # POST /suggestions
-│       │   ├── auth.py                 # /auth/login, /auth/logout, /auth/me
+│       │   ├── suggestions.py          # POST /suggestions (optional auth)
+│       │   ├── auth.py                 # /auth/{signup,login,logout,me,account,password-reset/*}
+│       │   ├── preferences.py          # GET/PUT /preferences
+│       │   ├── watchlist.py            # /watchlist CRUD (require_user)
 │       │   └── admin_recipes.py        # /admin/recipes CRUD + /import (admin-only)
 │       └── admin/
 │           ├── add_recipe_cli.py
@@ -108,6 +128,7 @@ veggie-app/
 │   │   ├── api/                       # HTTP calls to backend
 │   │   ├── components/                # app components (Header, RecipeForm, ...)
 │   │   │   └── ui/                    # styled primitives (Button, Card, Input, ...)
+│   │   ├── hooks/                      # useSession (auth-gated pages), ...
 │   │   ├── pages/
 │   │   ├── types/
 │   │   └── utils/                     # framework-agnostic helpers (cn, motion tokens, ...)

@@ -1,16 +1,24 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getCurrentAdmin, login, logout } from "../src/api/auth";
+import {
+  confirmPasswordReset,
+  deleteAccount,
+  getCurrentUser,
+  login,
+  logout,
+  requestPasswordReset,
+  signup,
+  updateAccount,
+} from "../src/api/auth";
 
 describe("login", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it("POSTs credentials with credentials included and returns the parsed response", async () => {
-    const mockResponse = { email: "admin@example.com" };
+  it("POSTs credentials with credentials included and maps the response to camelCase", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve(mockResponse),
+      json: () => Promise.resolve({ email: "admin@example.com", is_admin: true }),
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -24,7 +32,7 @@ describe("login", () => {
         body: JSON.stringify({ email: "admin@example.com", password: "secret" }),
       }),
     );
-    expect(result).toEqual(mockResponse);
+    expect(result).toEqual({ email: "admin@example.com", isAdmin: true });
   });
 
   it("throws when the response is not ok", async () => {
@@ -34,6 +42,47 @@ describe("login", () => {
     );
 
     await expect(login("admin@example.com", "wrong")).rejects.toThrow("401");
+  });
+});
+
+describe("signup", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("POSTs credentials and maps the response, defaulting is_admin to false", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ email: "person@example.com", is_admin: false }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await signup("person@example.com", "secret");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\/auth\/signup$/),
+      expect.objectContaining({
+        method: "POST",
+        credentials: "include",
+        body: JSON.stringify({ email: "person@example.com", password: "secret" }),
+      }),
+    );
+    expect(result).toEqual({ email: "person@example.com", isAdmin: false });
+  });
+
+  it("surfaces the server's detail message on a duplicate-email conflict", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 409,
+        json: () => Promise.resolve({ detail: "Cet email est déjà utilisé" }),
+      }),
+    );
+
+    await expect(signup("taken@example.com", "secret")).rejects.toThrow(
+      "Cet email est déjà utilisé",
+    );
   });
 });
 
@@ -55,23 +104,25 @@ describe("logout", () => {
   });
 });
 
-describe("getCurrentAdmin", () => {
+describe("getCurrentUser", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it("returns the parsed admin when the session is valid", async () => {
-    const mockResponse = { email: "admin@example.com" };
+  it("returns the mapped user when the session is valid", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
-        json: () => Promise.resolve(mockResponse),
+        json: () => Promise.resolve({ email: "person@example.com", is_admin: false }),
       }),
     );
 
-    await expect(getCurrentAdmin()).resolves.toEqual(mockResponse);
+    await expect(getCurrentUser()).resolves.toEqual({
+      email: "person@example.com",
+      isAdmin: false,
+    });
   });
 
   it("returns null when the session is missing or invalid (401)", async () => {
@@ -80,7 +131,7 @@ describe("getCurrentAdmin", () => {
       vi.fn().mockResolvedValue({ ok: false, status: 401, json: () => Promise.resolve({}) }),
     );
 
-    await expect(getCurrentAdmin()).resolves.toBeNull();
+    await expect(getCurrentUser()).resolves.toBeNull();
   });
 
   it("throws for other error statuses", async () => {
@@ -89,6 +140,120 @@ describe("getCurrentAdmin", () => {
       vi.fn().mockResolvedValue({ ok: false, status: 500, json: () => Promise.resolve({}) }),
     );
 
-    await expect(getCurrentAdmin()).rejects.toThrow("500");
+    await expect(getCurrentUser()).rejects.toThrow("500");
+  });
+});
+
+describe("requestPasswordReset", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("returns the reset token from the response", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ status: "ok", reset_token: "abc123" }),
+      }),
+    );
+
+    await expect(requestPasswordReset("person@example.com")).resolves.toEqual({
+      resetToken: "abc123",
+    });
+  });
+
+  it("returns a null token when the account doesn't exist", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ status: "ok", reset_token: null }),
+      }),
+    );
+
+    await expect(requestPasswordReset("nobody@example.com")).resolves.toEqual({
+      resetToken: null,
+    });
+  });
+});
+
+describe("confirmPasswordReset", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("POSTs the token and new password", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await confirmPasswordReset("abc123", "new password");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\/auth\/password-reset\/confirm$/),
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ token: "abc123", new_password: "new password" }),
+      }),
+    );
+  });
+
+  it("throws when the token is invalid or expired", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        json: () => Promise.resolve({ detail: "Lien de réinitialisation invalide ou expiré" }),
+      }),
+    );
+
+    await expect(confirmPasswordReset("bad-token", "new password")).rejects.toThrow(
+      "Lien de réinitialisation invalide ou expiré",
+    );
+  });
+});
+
+describe("updateAccount", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("PATCHes the given fields and maps the response", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ email: "new@example.com", is_admin: false }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await updateAccount({ email: "new@example.com" });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\/auth\/account$/),
+      expect.objectContaining({
+        method: "PATCH",
+        credentials: "include",
+        body: JSON.stringify({ email: "new@example.com" }),
+      }),
+    );
+    expect(result).toEqual({ email: "new@example.com", isAdmin: false });
+  });
+});
+
+describe("deleteAccount", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("DELETEs the current account with credentials included", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await deleteAccount();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\/auth\/account$/),
+      expect.objectContaining({ method: "DELETE", credentials: "include" }),
+    );
   });
 });

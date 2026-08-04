@@ -6,7 +6,7 @@ describe("fetchSuggestions", () => {
     vi.unstubAllGlobals();
   });
 
-  it("POSTs the title and ingredients and returns the parsed response", async () => {
+  it("POSTs the title/ingredients with credentials included and ignore_preferences false by default", async () => {
     const mockResponse = { suggestions: [{ id: 1, title: "Curry", ingredients: [], score: 1 }] };
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
@@ -20,10 +20,32 @@ describe("fetchSuggestions", () => {
       expect.stringMatching(/\/suggestions$/),
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ title: "Poulet au curry", ingredients: ["poulet", "curry"] }),
+        credentials: "include",
+        body: JSON.stringify({
+          title: "Poulet au curry",
+          ingredients: ["poulet", "curry"],
+          ignore_preferences: false,
+        }),
       }),
     );
     expect(result).toEqual(mockResponse);
+  });
+
+  it("passes ignore_preferences through when set", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ suggestions: [] }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await fetchSuggestions("Curry", [], true);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\/suggestions$/),
+      expect.objectContaining({
+        body: JSON.stringify({ title: "Curry", ingredients: [], ignore_preferences: true }),
+      }),
+    );
   });
 
   it("throws when the response is not ok", async () => {

@@ -33,6 +33,7 @@ function buildSuggestion(overrides: Partial<RecipeSuggestion> = {}): RecipeSugge
     protein_density: null,
     instructions: [],
     image_url: null,
+    is_watchlisted: false,
     ...overrides,
   };
 }

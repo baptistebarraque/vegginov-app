@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import IngredientBurst from "./IngredientBurst";
 import { Badge } from "./ui/Badge";
+import { WatchlistButton } from "./WatchlistButton";
 import type { RecipeSuggestion } from "../types/recipe";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -15,9 +16,11 @@ function priceTierLabel(tier: number): string {
 interface RecipeDetailPanelProps {
   suggestion: RecipeSuggestion;
   onClose: () => void;
+  /** Omitted entirely (no button rendered) when the user is anonymous. */
+  onToggleWatchlist?: () => void;
 }
 
-function RecipeDetailPanel({ suggestion, onClose }: RecipeDetailPanelProps) {
+function RecipeDetailPanel({ suggestion, onClose, onToggleWatchlist }: RecipeDetailPanelProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -51,15 +54,23 @@ function RecipeDetailPanel({ suggestion, onClose }: RecipeDetailPanelProps) {
               </h2>
               <Badge variant="score">{Math.round(suggestion.score * 100)} % de proximité</Badge>
             </div>
-            <button
-              ref={closeButtonRef}
-              type="button"
-              onClick={onClose}
-              aria-label="Fermer"
-              className="rounded-sm text-sauge transition-colors hover:text-craie focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pousse"
-            >
-              <X className="size-5" aria-hidden="true" />
-            </button>
+            <div className="flex items-center gap-1">
+              {onToggleWatchlist && (
+                <WatchlistButton
+                  isWatchlisted={suggestion.is_watchlisted}
+                  onToggle={onToggleWatchlist}
+                />
+              )}
+              <button
+                ref={closeButtonRef}
+                type="button"
+                onClick={onClose}
+                aria-label="Fermer"
+                className="rounded-sm text-sauge transition-colors hover:text-craie focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pousse"
+              >
+                <X className="size-5" aria-hidden="true" />
+              </button>
+            </div>
           </div>
 
           {suggestion.image_url && (

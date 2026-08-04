@@ -2,7 +2,7 @@ import { Sprout } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { deleteRecipe, exportRecipesCsv, listRecipes } from "../api/adminRecipes";
-import { getCurrentAdmin, logout } from "../api/auth";
+import { logout } from "../api/auth";
 import { AdminTable } from "../components/AdminTable";
 import { AppShell } from "../components/AppShell";
 import { Header } from "../components/Header";
@@ -10,12 +10,11 @@ import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { EmptyState } from "../components/ui/EmptyState";
 import { Skeleton } from "../components/ui/Skeleton";
-import type { AdminUser } from "../types/auth";
+import { useSession } from "../hooks/useSession";
 import type { RecipeListItem } from "../types/recipe";
 
 function AdminRecipeListPage() {
-  const [admin, setAdmin] = useState<AdminUser | null>(null);
-  const [isCheckingSession, setIsCheckingSession] = useState(true);
+  const { user: admin, isChecking: isCheckingSession } = useSession({ requireAdmin: true });
   const [recipes, setRecipes] = useState<RecipeListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,17 +22,6 @@ function AdminRecipeListPage() {
   const [exportError, setExportError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    getCurrentAdmin().then((current) => {
-      if (current === null) {
-        navigate("/admin/login");
-      } else {
-        setAdmin(current);
-        setIsCheckingSession(false);
-      }
-    });
-  }, [navigate]);
 
   useEffect(() => {
     if (admin === null) {

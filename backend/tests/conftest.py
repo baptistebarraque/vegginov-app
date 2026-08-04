@@ -14,9 +14,12 @@ from sqlalchemy.orm import Session
 
 from veggie_app.database import engine, get_db
 from veggie_app.main import app
-from veggie_app.models.admin_session import AdminSession
+from veggie_app.models.password_reset_token import PasswordResetToken
 from veggie_app.models.recipe import Recipe
 from veggie_app.models.user import User
+from veggie_app.models.user_preference import UserPreference
+from veggie_app.models.user_session import UserSession
+from veggie_app.models.watchlist_entry import WatchlistEntry
 
 
 @pytest.fixture()
@@ -32,9 +35,17 @@ def db_session() -> Generator[Session, None, None]:
     """
     connection = engine.connect()
     transaction = connection.begin()
-    session = Session(bind=connection)
+    # create_savepoint: app code (auth_service) uses db.begin_nested() around
+    # inserts/updates that might violate a unique constraint, so its SAVEPOINT
+    # rolls back just that statement instead of unwinding this fixture's
+    # outer transaction — the default "conditional_savepoint" mode still
+    # deassociates the outer transaction in that case.
+    session = Session(bind=connection, join_transaction_mode="create_savepoint")
 
-    session.execute(delete(AdminSession))
+    session.execute(delete(UserSession))
+    session.execute(delete(PasswordResetToken))
+    session.execute(delete(UserPreference))
+    session.execute(delete(WatchlistEntry))
     session.execute(delete(User))
     session.execute(delete(Recipe))
     session.flush()

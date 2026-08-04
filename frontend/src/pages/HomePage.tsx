@@ -1,7 +1,9 @@
 import { SearchX, TriangleAlert } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
+import { getCurrentUser } from "../api/auth";
 import { fetchSuggestions } from "../api/suggestions";
+import { addToWatchlist, removeFromWatchlist } from "../api/watchlist";
 import { AnimatedTitle } from "../components/AnimatedTitle";
 import { AppShell } from "../components/AppShell";
 import { Header } from "../components/Header";
@@ -12,7 +14,11 @@ import { SourceRecipeSummary } from "../components/SourceRecipeSummary";
 import { Eyebrow } from "../components/ui/Eyebrow";
 import { EmptyState } from "../components/ui/EmptyState";
 import { Skeleton } from "../components/ui/Skeleton";
+import type { User } from "../types/auth";
 import type { RecipeSuggestion } from "../types/recipe";
+
+const headerLinkClassName =
+  "rounded-md px-3 py-2 text-sm text-sauge transition-colors hover:bg-feuille-haut hover:text-craie focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pousse";
 
 // The highlighted noun cycles through these in the hero headline (§6.1).
 const HERO_WORDS = [
@@ -33,13 +39,23 @@ function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submittedQuery, setSubmittedQuery] = useState<SubmittedQuery | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [ignorePreferences, setIgnorePreferences] = useState(false);
+
+  useEffect(() => {
+    // Anonymous browsing (suggestions) is fully supported — this only
+    // decides what the header shows, it never gates the page.
+    getCurrentUser()
+      .then(setUser)
+      .catch(() => setUser(null));
+  }, []);
 
   async function handleSubmit(title: string, ingredients: string[]) {
     setIsLoading(true);
     setError(null);
     setSubmittedQuery({ title, ingredients });
     try {
-      const response = await fetchSuggestions(title, ingredients);
+      const response = await fetchSuggestions(title, ingredients, ignorePreferences);
       setSuggestions(response.suggestions);
     } catch {
       setError("Impossible de récupérer des suggestions pour le moment.");
@@ -48,16 +64,61 @@ function HomePage() {
     }
   }
 
+  function setWatchlisted(recipeId: number, value: boolean) {
+    setSuggestions((current) =>
+      current.map((suggestion) =>
+        suggestion.id === recipeId ? { ...suggestion, is_watchlisted: value } : suggestion,
+      ),
+    );
+  }
+
+  async function handleToggleWatchlist(recipeId: number) {
+    const current = suggestions.find((suggestion) => suggestion.id === recipeId);
+    if (!current) {
+      return;
+    }
+    const wasWatchlisted = current.is_watchlisted;
+    // Optimistic: flip immediately, revert if the request fails.
+    setWatchlisted(recipeId, !wasWatchlisted);
+    try {
+      if (wasWatchlisted) {
+        await removeFromWatchlist(recipeId);
+      } else {
+        await addToWatchlist(recipeId);
+      }
+    } catch {
+      setWatchlisted(recipeId, wasWatchlisted);
+    }
+  }
+
   return (
     <AppShell>
       <Header
         actions={
-          <Link
-            to="/admin/login"
-            className="rounded-md px-3 py-2 text-sm text-sauge transition-colors hover:bg-feuille-haut hover:text-craie focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pousse"
-          >
-            Espace admin
-          </Link>
+          <>
+            {user ? (
+              <>
+                <Link to="/watchlist" className={headerLinkClassName}>
+                  Ma liste
+                </Link>
+                <Link to="/account" className={headerLinkClassName}>
+                  {user.email}
+                </Link>
+              </>
+            ) : (
+              <Link to="/login" className={headerLinkClassName}>
+                Se connecter
+              </Link>
+            )}
+            {user?.isAdmin && (
+              // Already authenticated (as an admin) to get this link at all,
+              // so it goes straight into the admin panel, not back through
+              // a login form.
+              <Link to="/admin" className={headerLinkClassName}>
+                Espace admin
+              </Link>
+            )}
+          </>
         }
       />
 
@@ -90,6 +151,17 @@ function HomePage() {
           </Reveal>
           <Reveal delay={0.22} className="mt-8">
             <RecipeForm onSubmit={handleSubmit} isLoading={isLoading} />
+            {user && (
+              <label className="mt-3 flex items-center gap-2 text-sm text-sauge">
+                <input
+                  type="checkbox"
+                  checked={ignorePreferences}
+                  onChange={(event) => setIgnorePreferences(event.target.checked)}
+                  className="accent-pousse"
+                />
+                Ignorer mes préférences (allergènes, budget, calories)
+              </label>
+            )}
           </Reveal>
         </section>
 
@@ -129,7 +201,10 @@ function HomePage() {
                     {suggestions.length} alternatives végétariennes
                   </h2>
                   <div className="mt-6 flex justify-center">
-                    <RecipeSuggestionGrid suggestions={suggestions} />
+                    <RecipeSuggestionGrid
+                      suggestions={suggestions}
+                      onToggleWatchlist={user ? handleToggleWatchlist : undefined}
+                    />
                   </div>
                 </>
               )}

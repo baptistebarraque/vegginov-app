@@ -2,9 +2,9 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
-from veggie_app.models.admin_session import AdminSession
 from veggie_app.models.recipe import EMBEDDING_DIM, Recipe
 from veggie_app.models.user import User
+from veggie_app.models.user_session import UserSession
 
 
 def test_recipe_round_trip(db_session: Session) -> None:
@@ -47,17 +47,17 @@ def test_user_round_trip(db_session: Session) -> None:
     assert fetched.created_at is not None
 
 
-def test_admin_session_round_trip(db_session: Session) -> None:
+def test_user_session_round_trip(db_session: Session) -> None:
     user = User(email="admin@example.com", password_hash="hashed-password", is_admin=True)
     db_session.add(user)
     db_session.flush()
 
     expires_at = datetime.now(UTC) + timedelta(days=7)
-    session = AdminSession(user_id=user.id, token_hash="a" * 64, expires_at=expires_at)
+    session = UserSession(user_id=user.id, token_hash="a" * 64, expires_at=expires_at)
     db_session.add(session)
     db_session.flush()
 
-    fetched = db_session.get(AdminSession, session.id)
+    fetched = db_session.get(UserSession, session.id)
 
     assert fetched is not None
     assert fetched.user_id == user.id

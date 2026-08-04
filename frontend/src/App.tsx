@@ -1,10 +1,18 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router";
+import AccountPage from "./pages/AccountPage";
 import AdminLoginPage from "./pages/AdminLoginPage";
 import AdminRecipeDetailPage from "./pages/AdminRecipeDetailPage";
 import AdminRecipeListPage from "./pages/AdminRecipeListPage";
 import AdminUploadPage from "./pages/AdminUploadPage";
+import ConfirmPasswordResetPage from "./pages/ConfirmPasswordResetPage";
 import HomePage from "./pages/HomePage";
+import LoginPage from "./pages/LoginPage";
+import OnboardingPage from "./pages/OnboardingPage";
+import ProfilePreferencesPage from "./pages/ProfilePreferencesPage";
+import RequestPasswordResetPage from "./pages/RequestPasswordResetPage";
+import SignupPage from "./pages/SignupPage";
+import WatchlistPage from "./pages/WatchlistPage";
 import { DURATION } from "./utils/motion";
 
 // Route transition (docs/FRONTEND.md §6.5): a plain opacity/y fade on the whole
@@ -23,6 +31,14 @@ function AnimatedRoutes() {
       >
         <Routes location={location}>
           <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/account" element={<AccountPage />} />
+          <Route path="/onboarding" element={<OnboardingPage />} />
+          <Route path="/preferences" element={<ProfilePreferencesPage />} />
+          <Route path="/watchlist" element={<WatchlistPage />} />
+          <Route path="/reset-password" element={<RequestPasswordResetPage />} />
+          <Route path="/reset-password/confirm" element={<ConfirmPasswordResetPage />} />
           <Route path="/admin/login" element={<AdminLoginPage />} />
           <Route path="/admin" element={<AdminUploadPage />} />
           <Route path="/admin/recipes" element={<AdminRecipeListPage />} />

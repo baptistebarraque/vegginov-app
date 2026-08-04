@@ -46,7 +46,7 @@ def main() -> None:
 
     db = SessionLocal()
     try:
-        admin = auth_service.create_admin(db, email, password)
+        admin = auth_service.register_user(db, email, password, is_admin=True)
         db.commit()
         admin_id = admin.id
     finally:

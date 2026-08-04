@@ -17,7 +17,9 @@ def _stub_embedding(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _login_as_admin(client: TestClient, db_session: Session) -> None:
-    auth_service.create_admin(db_session, "admin@example.com", "correct horse battery")
+    auth_service.register_user(
+        db_session, "admin@example.com", "correct horse battery", is_admin=True
+    )
     db_session.flush()
     client.post(
         "/auth/login", json={"email": "admin@example.com", "password": "correct horse battery"}

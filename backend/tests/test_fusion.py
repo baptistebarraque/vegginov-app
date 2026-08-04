@@ -1,7 +1,12 @@
 import pytest
 
 from veggie_app.matching import fusion
-from veggie_app.matching.fusion import CandidateRecipe, fuse_scores, rank_candidates
+from veggie_app.matching.fusion import (
+    CandidateRecipe,
+    apply_calorie_orientation,
+    fuse_scores,
+    rank_candidates,
+)
 
 
 def test_fuse_scores_weights_title_and_ingredients() -> None:
@@ -11,6 +16,28 @@ def test_fuse_scores_weights_title_and_ingredients() -> None:
 
 def test_fuse_scores_uses_default_weight() -> None:
     assert fuse_scores(1.0, 0.0) == pytest.approx(fusion.DEFAULT_TITLE_WEIGHT)
+
+
+def test_apply_calorie_orientation_none_returns_similarity_unchanged() -> None:
+    assert apply_calorie_orientation(0.8, 300.0, None) == pytest.approx(0.8)
+
+
+def test_apply_calorie_orientation_blends_matching_bucket() -> None:
+    # low-calorie recipe, user wants low -> calorie score 1.0.
+    result = apply_calorie_orientation(0.8, 300.0, "low", calorie_weight=0.15)
+    assert result == pytest.approx(0.85 * 0.8 + 0.15 * 1.0)
+
+
+def test_apply_calorie_orientation_penalizes_opposite_bucket() -> None:
+    # high-calorie recipe, user wants low -> calorie score 0.0.
+    result = apply_calorie_orientation(0.8, 900.0, "low", calorie_weight=0.15)
+    assert result == pytest.approx(0.85 * 0.8)
+
+
+def test_apply_calorie_orientation_missing_calories_is_neutral() -> None:
+    # No calorie data -> neutral 0.5, so the recipe isn't buried.
+    result = apply_calorie_orientation(0.8, None, "low", calorie_weight=0.15)
+    assert result == pytest.approx(0.85 * 0.8 + 0.15 * 0.5)
 
 
 @pytest.fixture(autouse=True)
@@ -59,3 +86,48 @@ def test_rank_candidates_combines_title_and_ingredients_scores(
 
     # title cosine similarity = 1.0, ingredients score stubbed to 1.0 -> fused = 1.0
     assert ranked[0] == (1, pytest.approx(1.0))
+
+
+def test_rank_candidates_orientation_reorders_equal_similarity_candidates() -> None:
+    # Two recipes with identical title similarity but different calories: the
+    # one matching the "low" orientation should rank first.
+    query_embedding = [1.0, 0.0]
+    candidates = [
+        CandidateRecipe(
+            id=1,
+            title_embedding=[1.0, 0.0],
+            ingredient_names=[],
+            protein_source=None,
+            calories_per_portion=900.0,  # high
+        ),
+        CandidateRecipe(
+            id=2,
+            title_embedding=[1.0, 0.0],
+            ingredient_names=[],
+            protein_source=None,
+            calories_per_portion=300.0,  # low
+        ),
+    ]
+
+    ranked = rank_candidates(query_embedding, [], candidates, calorie_orientation="low")
+
+    assert [candidate_id for candidate_id, _ in ranked] == [2, 1]
+
+
+def test_rank_candidates_without_orientation_ignores_calories() -> None:
+    # Same two recipes, no orientation -> calories don't matter, order is stable.
+    query_embedding = [1.0, 0.0]
+    candidates = [
+        CandidateRecipe(
+            id=1, title_embedding=[1.0, 0.0], ingredient_names=[], protein_source=None,
+            calories_per_portion=900.0,
+        ),
+        CandidateRecipe(
+            id=2, title_embedding=[1.0, 0.0], ingredient_names=[], protein_source=None,
+            calories_per_portion=300.0,
+        ),
+    ]
+
+    ranked = rank_candidates(query_embedding, [], candidates)
+
+    assert all(score == pytest.approx(ranked[0][1]) for _, score in ranked)

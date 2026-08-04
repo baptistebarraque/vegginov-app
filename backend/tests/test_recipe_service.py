@@ -49,6 +49,129 @@ def test_get_suggestions_caps_at_suggestion_count(db_session: Session) -> None:
     assert len(suggestions) == recipe_service.SUGGESTION_COUNT
 
 
+def test_get_suggestions_excludes_recipes_matching_excluded_allergens(db_session: Session) -> None:
+    safe = Recipe(
+        title="Sans gluten", ingredients=[], allergens=["lactose"], embedding=_unit_vector(0)
+    )
+    unsafe = Recipe(
+        title="Avec gluten", ingredients=[], allergens=["gluten"], embedding=_unit_vector(0)
+    )
+    db_session.add_all([safe, unsafe])
+    db_session.flush()
+
+    suggestions = recipe_service.get_suggestions(
+        db_session, "query", [], excluded_allergens=["gluten"]
+    )
+
+    assert [s.title for s in suggestions] == ["Sans gluten"]
+
+
+def test_get_suggestions_ignores_exclusion_when_none_given(db_session: Session) -> None:
+    unsafe = Recipe(
+        title="Avec gluten", ingredients=[], allergens=["gluten"], embedding=_unit_vector(0)
+    )
+    db_session.add(unsafe)
+    db_session.flush()
+
+    suggestions = recipe_service.get_suggestions(db_session, "query", [], excluded_allergens=None)
+
+    assert [s.title for s in suggestions] == ["Avec gluten"]
+
+
+def test_get_suggestions_excludes_recipes_above_price_budget(db_session: Session) -> None:
+    cheap = Recipe(
+        title="Bon marché", ingredients=[], allergens=[], price_tier=1, embedding=_unit_vector(0)
+    )
+    pricey = Recipe(
+        title="Cher", ingredients=[], allergens=[], price_tier=3, embedding=_unit_vector(0)
+    )
+    db_session.add_all([cheap, pricey])
+    db_session.flush()
+
+    suggestions = recipe_service.get_suggestions(db_session, "query", [], max_price_tier=2)
+
+    assert [s.title for s in suggestions] == ["Bon marché"]
+
+
+def test_get_suggestions_keeps_unpriced_recipes_under_budget(db_session: Session) -> None:
+    # A recipe with no price_tier yet must not be dropped by the budget cap.
+    unpriced = Recipe(
+        title="Sans prix", ingredients=[], allergens=[], price_tier=None, embedding=_unit_vector(0)
+    )
+    db_session.add(unpriced)
+    db_session.flush()
+
+    suggestions = recipe_service.get_suggestions(db_session, "query", [], max_price_tier=1)
+
+    assert [s.title for s in suggestions] == ["Sans prix"]
+
+
+def test_get_suggestions_top_price_tier_is_indifferent(db_session: Session) -> None:
+    # max_price_tier == MAX_PRICE_TIER (€€€) keeps everything, including the
+    # most expensive recipes.
+    pricey = Recipe(
+        title="Cher", ingredients=[], allergens=[], price_tier=3, embedding=_unit_vector(0)
+    )
+    db_session.add(pricey)
+    db_session.flush()
+
+    suggestions = recipe_service.get_suggestions(
+        db_session, "query", [], max_price_tier=recipe_service.MAX_PRICE_TIER
+    )
+
+    assert [s.title for s in suggestions] == ["Cher"]
+
+
+def test_get_suggestions_orientation_ranks_matching_calories_first(db_session: Session) -> None:
+    high = Recipe(
+        title="Copieux",
+        ingredients=[],
+        allergens=[],
+        calories_per_portion=900.0,
+        embedding=_unit_vector(0),
+    )
+    low = Recipe(
+        title="Léger",
+        ingredients=[],
+        allergens=[],
+        calories_per_portion=300.0,
+        embedding=_unit_vector(0),
+    )
+    db_session.add_all([high, low])
+    db_session.flush()
+
+    suggestions = recipe_service.get_suggestions(
+        db_session, "query", [], calorie_orientation="low"
+    )
+
+    assert [s.title for s in suggestions] == ["Léger", "Copieux"]
+
+
+def test_get_suggestions_marks_watchlisted_recipes(db_session: Session) -> None:
+    saved = Recipe(title="Sauvegardée", ingredients=[], allergens=[], embedding=_unit_vector(0))
+    other = Recipe(title="Autre", ingredients=[], allergens=[], embedding=_unit_vector(0))
+    db_session.add_all([saved, other])
+    db_session.flush()
+
+    suggestions = recipe_service.get_suggestions(
+        db_session, "query", [], watchlisted_recipe_ids={saved.id}
+    )
+
+    by_title = {s.title: s.is_watchlisted for s in suggestions}
+    assert by_title == {"Sauvegardée": True, "Autre": False}
+
+
+def test_get_suggestions_defaults_is_watchlisted_to_false_when_anonymous(
+    db_session: Session,
+) -> None:
+    db_session.add(Recipe(title="Recette", ingredients=[], allergens=[], embedding=_unit_vector(0)))
+    db_session.flush()
+
+    suggestions = recipe_service.get_suggestions(db_session, "query", [])
+
+    assert suggestions[0].is_watchlisted is False
+
+
 def test_get_suggestions_returns_ingredients_with_quantities(db_session: Session) -> None:
     ingredients = [
         {"name": "lentilles", "quantity": "200g"},
