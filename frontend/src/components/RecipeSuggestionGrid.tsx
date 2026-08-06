@@ -13,6 +13,10 @@ interface RecipeSuggestionGridProps {
   suggestions: RecipeSuggestion[];
   /** Omitted entirely (no watchlist button rendered anywhere) when anonymous. */
   onToggleWatchlist?: (recipeId: number) => void;
+  /** The app always provides this (the like count is public). For anonymous
+   * visitors the parent routes the click to /login instead of toggling.
+   * Optional only so isolated tests can omit it. */
+  onToggleLike?: (recipeId: number) => void;
 }
 
 // Sizes the 2 tracks on one axis: the active index gets 75% of the axis,
@@ -52,7 +56,11 @@ function useCanHover(): boolean {
   return canHover;
 }
 
-function RecipeSuggestionGrid({ suggestions, onToggleWatchlist }: RecipeSuggestionGridProps) {
+function RecipeSuggestionGrid({
+  suggestions,
+  onToggleWatchlist,
+  onToggleLike,
+}: RecipeSuggestionGridProps) {
   const [hoveredId, setHoveredId] = useState<number | null>(null);
   const [openId, setOpenId] = useState<number | null>(null);
   const canHover = useCanHover();
@@ -177,6 +185,7 @@ function RecipeSuggestionGrid({ suggestions, onToggleWatchlist }: RecipeSuggesti
             onToggleWatchlist={
               onToggleWatchlist ? () => onToggleWatchlist(openSuggestion.id) : undefined
             }
+            onToggleLike={onToggleLike ? () => onToggleLike(openSuggestion.id) : undefined}
           />
         )}
       </AnimatePresence>

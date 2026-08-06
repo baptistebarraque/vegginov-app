@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import RecipeDetailPanel from "../src/components/RecipeDetailPanel";
 import type { RecipeSuggestion } from "../src/types/recipe";
@@ -23,6 +24,8 @@ function buildSuggestion(overrides: Partial<RecipeSuggestion> = {}): RecipeSugge
     instructions: [],
     image_url: null,
     is_watchlisted: false,
+    is_liked: false,
+    like_count: 0,
     ...overrides,
   };
 }
@@ -62,5 +65,40 @@ describe("RecipeDetailPanel", () => {
     expect(screen.queryByText(/kcal/)).not.toBeInTheDocument();
     expect(screen.queryByText(/100 kcal/)).not.toBeInTheDocument();
     expect(screen.queryByText("Prix")).not.toBeInTheDocument();
+  });
+
+  it("shows the like count and reflects the liked state when onToggleLike is given", () => {
+    render(
+      <RecipeDetailPanel
+        suggestion={buildSuggestion({ is_liked: true, like_count: 3 })}
+        onClose={vi.fn()}
+        onToggleLike={vi.fn()}
+      />,
+    );
+
+    const likeButton = screen.getByRole("button", { name: /Ne plus aimer cette recette/ });
+    expect(likeButton).toHaveAttribute("aria-pressed", "true");
+    expect(likeButton).toHaveTextContent("3");
+  });
+
+  it("calls onToggleLike when the heart is clicked", async () => {
+    const onToggleLike = vi.fn();
+    render(
+      <RecipeDetailPanel
+        suggestion={buildSuggestion()}
+        onClose={vi.fn()}
+        onToggleLike={onToggleLike}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /Aimer cette recette/ }));
+
+    expect(onToggleLike).toHaveBeenCalledOnce();
+  });
+
+  it("renders no like button when onToggleLike is omitted", () => {
+    render(<RecipeDetailPanel suggestion={buildSuggestion({ like_count: 3 })} onClose={vi.fn()} />);
+
+    expect(screen.queryByRole("button", { name: /aimer cette recette/i })).not.toBeInTheDocument();
   });
 });

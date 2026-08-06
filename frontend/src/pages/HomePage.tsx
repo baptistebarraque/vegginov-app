@@ -1,7 +1,8 @@
 import { SearchX, TriangleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { getCurrentUser } from "../api/auth";
+import { likeRecipe, unlikeRecipe } from "../api/likes";
 import { fetchSuggestions } from "../api/suggestions";
 import { addToWatchlist, removeFromWatchlist } from "../api/watchlist";
 import { AnimatedTitle } from "../components/AnimatedTitle";
@@ -11,6 +12,7 @@ import RecipeForm from "../components/RecipeForm";
 import RecipeSuggestionGrid from "../components/RecipeSuggestionGrid";
 import { Reveal } from "../components/Reveal";
 import { SourceRecipeSummary } from "../components/SourceRecipeSummary";
+import { BeanToggle } from "../components/ui/BeanToggle";
 import { Eyebrow } from "../components/ui/Eyebrow";
 import { EmptyState } from "../components/ui/EmptyState";
 import { Skeleton } from "../components/ui/Skeleton";
@@ -40,7 +42,10 @@ function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [submittedQuery, setSubmittedQuery] = useState<SubmittedQuery | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [ignorePreferences, setIgnorePreferences] = useState(false);
+  // Applying the profile's preferences is the default when signed in; the
+  // user can opt out per search. Sent to the API as its inverse (ignore flag).
+  const [applyPreferences, setApplyPreferences] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Anonymous browsing (suggestions) is fully supported — this only
@@ -55,7 +60,7 @@ function HomePage() {
     setError(null);
     setSubmittedQuery({ title, ingredients });
     try {
-      const response = await fetchSuggestions(title, ingredients, ignorePreferences);
+      const response = await fetchSuggestions(title, ingredients, !applyPreferences);
       setSuggestions(response.suggestions);
     } catch {
       setError("Impossible de récupérer des suggestions pour le moment.");
@@ -91,6 +96,41 @@ function HomePage() {
     }
   }
 
+  function setLikeState(recipeId: number, isLiked: boolean, likeCount: number) {
+    setSuggestions((current) =>
+      current.map((suggestion) =>
+        suggestion.id === recipeId
+          ? { ...suggestion, is_liked: isLiked, like_count: likeCount }
+          : suggestion,
+      ),
+    );
+  }
+
+  async function handleToggleLike(recipeId: number) {
+    // The like count is public, so the heart renders even when logged out —
+    // but liking needs an account. Send anonymous visitors to sign in.
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+    const current = suggestions.find((suggestion) => suggestion.id === recipeId);
+    if (!current) {
+      return;
+    }
+    const wasLiked = current.is_liked;
+    const previousCount = current.like_count;
+    // Optimistic: flip and adjust the count immediately, revert if it fails.
+    setLikeState(recipeId, !wasLiked, previousCount + (wasLiked ? -1 : 1));
+    try {
+      const status = wasLiked ? await unlikeRecipe(recipeId) : await likeRecipe(recipeId);
+      // Reconcile with the server's authoritative count (other users may have
+      // liked it since this page loaded).
+      setLikeState(recipeId, status.isLiked, status.likeCount);
+    } catch {
+      setLikeState(recipeId, wasLiked, previousCount);
+    }
+  }
+
   return (
     <AppShell>
       <Header
@@ -100,6 +140,9 @@ function HomePage() {
               <>
                 <Link to="/watchlist" className={headerLinkClassName}>
                   Ma liste
+                </Link>
+                <Link to="/likes" className={headerLinkClassName}>
+                  Coups de cœur
                 </Link>
                 <Link to="/account" className={headerLinkClassName}>
                   {user.email}
@@ -152,15 +195,12 @@ function HomePage() {
           <Reveal delay={0.22} className="mt-8">
             <RecipeForm onSubmit={handleSubmit} isLoading={isLoading} />
             {user && (
-              <label className="mt-3 flex items-center gap-2 text-sm text-sauge">
-                <input
-                  type="checkbox"
-                  checked={ignorePreferences}
-                  onChange={(event) => setIgnorePreferences(event.target.checked)}
-                  className="accent-pousse"
-                />
-                Ignorer mes préférences (allergènes, budget, calories)
-              </label>
+              <BeanToggle
+                className="mt-3"
+                checked={applyPreferences}
+                onChange={setApplyPreferences}
+                label="Appliquer les préférences du profil (allergènes, budget, calories)"
+              />
             )}
           </Reveal>
         </section>
@@ -204,6 +244,7 @@ function HomePage() {
                     <RecipeSuggestionGrid
                       suggestions={suggestions}
                       onToggleWatchlist={user ? handleToggleWatchlist : undefined}
+                      onToggleLike={handleToggleLike}
                     />
                   </div>
                 </>

@@ -14,6 +14,8 @@ export interface RecipeSuggestion {
   instructions: string[];
   image_url: string | null;
   is_watchlisted: boolean;
+  is_liked: boolean;
+  like_count: number;
 }
 
 export interface SuggestionResponse {

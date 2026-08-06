@@ -100,6 +100,12 @@ function AccountPage() {
           >
             Voir ma liste →
           </Link>
+          <Link
+            to="/likes"
+            className="inline-block text-sm text-pousse transition-colors hover:text-pousse-clair focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pousse"
+          >
+            Voir mes coups de cœur →
+          </Link>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-8 flex max-w-[420px] flex-col gap-4">
@@ -146,7 +152,7 @@ function AccountPage() {
               </Button>
             }
             title="Supprimer le compte ?"
-            description="Votre compte et toutes les données associées (préférences, favoris) seront définitivement supprimés. Cette action est irréversible."
+            description="Votre compte et toutes les données associées (préférences, liste, coups de cœur) seront définitivement supprimés. Cette action est irréversible."
             confirmLabel="Supprimer"
             loading={isDeleting}
             onConfirm={handleDelete}

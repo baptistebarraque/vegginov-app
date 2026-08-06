@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import IngredientBurst from "./IngredientBurst";
+import { LikeButton } from "./LikeButton";
 import { Badge } from "./ui/Badge";
 import { WatchlistButton } from "./WatchlistButton";
 import type { RecipeSuggestion } from "../types/recipe";
@@ -18,9 +19,18 @@ interface RecipeDetailPanelProps {
   onClose: () => void;
   /** Omitted entirely (no button rendered) when the user is anonymous. */
   onToggleWatchlist?: () => void;
+  /** The app always provides this (the like count is public, so the heart
+   * renders for anonymous visitors too — the parent routes their click to
+   * /login). Optional only so isolated tests can omit it. */
+  onToggleLike?: () => void;
 }
 
-function RecipeDetailPanel({ suggestion, onClose, onToggleWatchlist }: RecipeDetailPanelProps) {
+function RecipeDetailPanel({
+  suggestion,
+  onClose,
+  onToggleWatchlist,
+  onToggleLike,
+}: RecipeDetailPanelProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -55,6 +65,13 @@ function RecipeDetailPanel({ suggestion, onClose, onToggleWatchlist }: RecipeDet
               <Badge variant="score">{Math.round(suggestion.score * 100)} % de proximité</Badge>
             </div>
             <div className="flex items-center gap-1">
+              {onToggleLike && (
+                <LikeButton
+                  isLiked={suggestion.is_liked}
+                  likeCount={suggestion.like_count}
+                  onToggle={onToggleLike}
+                />
+              )}
               {onToggleWatchlist && (
                 <WatchlistButton
                   isWatchlisted={suggestion.is_watchlisted}

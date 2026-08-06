@@ -31,11 +31,13 @@ edit, or delete any of them from the web interface.
 signup/login/logout, password reset, account settings/delete), M2 (user
 preferences: calorie orientation, diet, allergens, price range; applied to
 `/suggestions` — allergens and price as a hard exclusion, calorie orientation
-as a soft ranking nudge — with an "ignore my preferences" opt-out), and M3
+as a soft ranking nudge — with an "ignore my preferences" opt-out), M3
 (watchlist: save/remove a recipe, notes + planned date, `is_watchlisted` on
-every suggestion) have landed — see the "User accounts", "User preferences",
-"Price budget + calorie orientation", and "Watchlist" architecture entries
-below. Likes (M4) is not built yet.
+every suggestion), and M4 (likes: like/unlike a recipe, a public `like_count`
++ per-user `is_liked` on every suggestion, a "Mes coups de cœur" view) have
+landed — see the "User accounts", "User preferences", "Price budget +
+calorie orientation", "Watchlist", and "Likes" architecture entries below.
+Phase 4 (M1–M4) is complete.
 
 Do not implement features from later phases unless explicitly requested.
 See `docs/ROADMAP.md` for the full phase breakdown.
@@ -97,12 +99,14 @@ veggie-app/
 │       │   ├── user_session.py         # opaque session tokens (hashed at rest)
 │       │   ├── password_reset_token.py # opaque reset tokens (hashed at rest)
 │       │   ├── user_preference.py      # one row per user (phase 4 M2)
-│       │   └── watchlist_entry.py      # one row per (user, recipe) (phase 4 M3)
+│       │   ├── watchlist_entry.py      # one row per (user, recipe) (phase 4 M3)
+│       │   └── recipe_like.py          # one row per (user, recipe) like (phase 4 M4)
 │       ├── schemas/                    # Pydantic request/response models only
 │       │   ├── recipe.py
 │       │   ├── auth.py
 │       │   ├── preference.py
-│       │   └── watchlist.py
+│       │   ├── watchlist.py
+│       │   └── like.py
 │       ├── matching/                   # pure similarity logic, no FastAPI/DB deps
 │       │   ├── embeddings.py
 │       │   ├── similarity.py
@@ -111,12 +115,14 @@ veggie-app/
 │       │   ├── recipe_service.py
 │       │   ├── auth_service.py
 │       │   ├── preference_service.py
-│       │   └── watchlist_service.py
+│       │   ├── watchlist_service.py
+│       │   └── like_service.py
 │       ├── api/routes/                 # thin routes only
 │       │   ├── suggestions.py          # POST /suggestions (optional auth)
 │       │   ├── auth.py                 # /auth/{signup,login,logout,me,account,password-reset/*}
 │       │   ├── preferences.py          # GET/PUT /preferences
 │       │   ├── watchlist.py            # /watchlist CRUD (require_user)
+│       │   ├── likes.py                # /likes GET + POST/DELETE (require_user)
 │       │   └── admin_recipes.py        # /admin/recipes CRUD + /import (admin-only)
 │       └── admin/
 │           ├── add_recipe_cli.py

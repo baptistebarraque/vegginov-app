@@ -581,3 +581,50 @@ frontend would have to swallow anyway); a separate `GET
 the N+1-per-card round trip `is_watchlisted` avoids); storing
 `is_watchlisted` on `RecipeResponse` too (rejected — no admin-flow use for
 it, see above).
+
+## Likes (Phase 4, M4): public counter, private liked-list, count computed on ranked recipes only
+
+Date: 2026-08-06
+Context: the like system (`docs/ROADMAP.md` Phase 4, GitHub issue section 4)
+needed like/unlike, a per-recipe like *counter*, and a "liked recipes" view —
+the first M4 feature where a piece of the state (the count) is **public**,
+unlike the fully-private watchlist.
+Decision:
+- **Structural twin of the watchlist** where the shapes match: one row per
+  `(user, recipe)` in `recipe_likes` (`models/recipe_like.py`), unique on
+  `(user_id, recipe_id)`, both FKs `ondelete="CASCADE"`; idempotent
+  `add`/`remove` (`like_service`); `list_for_user` ordered by `id DESC` for
+  the same frozen-`now()` tiebreak reason documented under Watchlist above.
+  The like row carries no `notes`/`planned_for` — a like is a bare marker.
+- **The count is public, so it lives on `/suggestions`, not on the
+  `require_user` `/likes` routes.** `RecipeSuggestion` gains `like_count`
+  (total across all users, shown to everyone including anonymous callers) and
+  `is_liked` (this user's flag, `false` for anonymous — same optional-auth
+  shape as `is_watchlisted`). `like_count` is computed **inside
+  `get_suggestions`, over the 4 *ranked* recipe ids only** via one grouped
+  query (`like_service.like_counts`), not per recipe and not over the whole
+  candidate set — the ranking already narrowed it to `SUGGESTION_COUNT`.
+  `is_liked` is threaded in from the route like `is_watchlisted`.
+- **`recipe_service` calls `like_service`** for the count. Services calling
+  services is already the norm here (`recipe_service` uses `image_service`);
+  the count depends on the ranked ids, which only exist inside
+  `get_suggestions`, so pushing the query up to the route would mean the route
+  guessing which recipes will rank.
+- **`POST`/`DELETE /likes/{recipe_id}` return the authoritative
+  `{recipe_id, like_count, is_liked}`** (`LikeStatusResponse`), and `DELETE`
+  is `200`, not `204` like the watchlist's. The count is shared state that
+  other users mutate concurrently, so the frontend reconciles its optimistic
+  ±1 against the server's real number rather than trusting its own guess —
+  a `204` would force a second fetch to get it.
+- **Frontend places the heart in the detail panel only**, not on the cards
+  (which already carry the watchlist bookmark) — keeps the 2×2 grid
+  uncluttered. Because the count is public, `LikeButton` renders for anonymous
+  visitors too (unlike `WatchlistButton`, which is omitted when anonymous);
+  their click is routed to `/login` by `HomePage`.
+Alternatives considered: a dedicated `GET /likes/count/{recipe_id}` per card
+(rejected — the same N+1 the suggestion-embedded count avoids); computing the
+count over every candidate recipe before ranking (rejected — wasted work on
+recipes that won't be shown); `DELETE` returning `204` for watchlist parity
+(rejected — the count is concurrently-mutable, see above); reusing the word
+"favoris" for the UI label (rejected — it's already loosely used for the
+watchlist, so likes use "Coups de cœur" to stay distinct).

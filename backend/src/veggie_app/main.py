@@ -4,7 +4,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from veggie_app.api.routes import admin_recipes, auth, preferences, suggestions, watchlist
+from veggie_app.api.routes import (
+    admin_recipes,
+    auth,
+    likes,
+    preferences,
+    suggestions,
+    watchlist,
+)
 from veggie_app.config import settings
 
 # StaticFiles requires the directory to exist at mount time.
@@ -30,6 +37,7 @@ app.include_router(auth.router)
 app.include_router(admin_recipes.router)
 app.include_router(preferences.router)
 app.include_router(watchlist.router)
+app.include_router(likes.router)
 app.mount("/media", StaticFiles(directory=settings.upload_dir), name="media")
 
 

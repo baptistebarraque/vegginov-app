@@ -16,6 +16,7 @@ from veggie_app.database import engine, get_db
 from veggie_app.main import app
 from veggie_app.models.password_reset_token import PasswordResetToken
 from veggie_app.models.recipe import Recipe
+from veggie_app.models.recipe_like import RecipeLike
 from veggie_app.models.user import User
 from veggie_app.models.user_preference import UserPreference
 from veggie_app.models.user_session import UserSession
@@ -46,6 +47,7 @@ def db_session() -> Generator[Session, None, None]:
     session.execute(delete(PasswordResetToken))
     session.execute(delete(UserPreference))
     session.execute(delete(WatchlistEntry))
+    session.execute(delete(RecipeLike))
     session.execute(delete(User))
     session.execute(delete(Recipe))
     session.flush()

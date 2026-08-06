@@ -8,7 +8,7 @@ from veggie_app.matching.fusion import CandidateRecipe, rank_candidates
 from veggie_app.matching.substitution import RECIPE_PROTEIN_VOCABULARY
 from veggie_app.models.recipe import IngredientEntry, Recipe
 from veggie_app.schemas.recipe import IngredientEntrySchema, RecipeSuggestion
-from veggie_app.services import image_service
+from veggie_app.services import image_service, like_service
 
 SUGGESTION_COUNT = 4
 
@@ -189,6 +189,7 @@ def get_suggestions(
     watchlisted_recipe_ids: set[int] | None = None,
     max_price_tier: int | None = None,
     calorie_orientation: str | None = None,
+    liked_recipe_ids: set[int] | None = None,
 ) -> list[RecipeSuggestion]:
     query_title_embedding = embed_text(title)
 
@@ -231,6 +232,10 @@ def get_suggestions(
     )
 
     recipes_by_id = {recipe.id: recipe for recipe in recipes}
+    # Public like counts for just the ranked recipes — one grouped query, not
+    # one per recipe. is_liked is per-user (passed in like watchlisted ids);
+    # the count is shown to everyone, including anonymous callers.
+    counts = like_service.like_counts(db, [recipe_id for recipe_id, _ in ranked])
     return [
         RecipeSuggestion(
             id=recipe_id,
@@ -254,6 +259,8 @@ def get_suggestions(
             instructions=recipes_by_id[recipe_id].instructions,
             image_url=image_service.image_url(recipes_by_id[recipe_id].image_filename),
             is_watchlisted=bool(watchlisted_recipe_ids) and recipe_id in watchlisted_recipe_ids,
+            is_liked=bool(liked_recipe_ids) and recipe_id in liked_recipe_ids,
+            like_count=counts.get(recipe_id, 0),
         )
         for recipe_id, score in ranked
     ]

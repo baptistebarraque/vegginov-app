@@ -34,6 +34,8 @@ function buildSuggestion(overrides: Partial<RecipeSuggestion> = {}): RecipeSugge
     instructions: [],
     image_url: null,
     is_watchlisted: false,
+    is_liked: false,
+    like_count: 0,
     ...overrides,
   };
 }
@@ -190,6 +192,22 @@ describe("RecipeSuggestionGrid", () => {
     fireEvent.click(screen.getByRole("button", { name: /Curry de lentilles/ }));
 
     expect(screen.getByText("Faire revenir les oignons")).toBeInTheDocument();
+  });
+
+  it("calls onToggleLike with the recipe id from the opened detail panel", async () => {
+    const user = userEvent.setup();
+    const onToggleLike = vi.fn();
+    render(
+      <RecipeSuggestionGrid
+        suggestions={[buildSuggestion({ id: 7, like_count: 2 })]}
+        onToggleLike={onToggleLike}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Curry de lentilles/ }));
+    await user.click(screen.getByRole("button", { name: /Aimer cette recette/ }));
+
+    expect(onToggleLike).toHaveBeenCalledWith(7);
   });
 
   it("closes the detail panel when clicking the backdrop", async () => {

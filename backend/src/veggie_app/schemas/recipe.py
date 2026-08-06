@@ -32,6 +32,8 @@ class RecipeSuggestion(BaseModel):
     instructions: list[str]
     image_url: str | None
     is_watchlisted: bool  # false (never null) when the caller is anonymous
+    is_liked: bool  # false (never null) when the caller is anonymous
+    like_count: int  # public total across all users; 0 when no one has liked it
 
 
 class SuggestionResponse(BaseModel):

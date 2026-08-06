@@ -7,6 +7,7 @@ import AdminRecipeListPage from "./pages/AdminRecipeListPage";
 import AdminUploadPage from "./pages/AdminUploadPage";
 import ConfirmPasswordResetPage from "./pages/ConfirmPasswordResetPage";
 import HomePage from "./pages/HomePage";
+import LikedRecipesPage from "./pages/LikedRecipesPage";
 import LoginPage from "./pages/LoginPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import ProfilePreferencesPage from "./pages/ProfilePreferencesPage";
@@ -37,6 +38,7 @@ function AnimatedRoutes() {
           <Route path="/onboarding" element={<OnboardingPage />} />
           <Route path="/preferences" element={<ProfilePreferencesPage />} />
           <Route path="/watchlist" element={<WatchlistPage />} />
+          <Route path="/likes" element={<LikedRecipesPage />} />
           <Route path="/reset-password" element={<RequestPasswordResetPage />} />
           <Route path="/reset-password/confirm" element={<ConfirmPasswordResetPage />} />
           <Route path="/admin/login" element={<AdminLoginPage />} />
