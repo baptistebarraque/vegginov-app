@@ -168,9 +168,6 @@ function RecipeSuggestionGrid({
                   ? "Toucher à nouveau pour voir la recette"
                   : undefined
               }
-              onToggleWatchlist={
-                onToggleWatchlist ? () => onToggleWatchlist(suggestion.id) : undefined
-              }
             />
           </motion.div>
         ))}
