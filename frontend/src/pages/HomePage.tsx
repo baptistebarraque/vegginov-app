@@ -13,6 +13,7 @@ import RecipeSuggestionGrid from "../components/RecipeSuggestionGrid";
 import { Reveal } from "../components/Reveal";
 import { SourceRecipeSummary } from "../components/SourceRecipeSummary";
 import { BeanToggle } from "../components/ui/BeanToggle";
+import { Button } from "../components/ui/Button";
 import { Eyebrow } from "../components/ui/Eyebrow";
 import { EmptyState } from "../components/ui/EmptyState";
 import { Skeleton } from "../components/ui/Skeleton";
@@ -36,8 +37,16 @@ interface SubmittedQuery {
   ingredients: string[];
 }
 
+// The grid always shows 4 recipes at a time. The API actually ranks and
+// returns up to 12 (recipe_service.SUGGESTION_COUNT) in one response — the
+// "Charger plus de recettes" button pages through the rest of that same
+// batch client-side rather than issuing a new search, then wraps back to
+// the top once every ranked recipe has been shown.
+const PAGE_SIZE = 4;
+
 function HomePage() {
   const [suggestions, setSuggestions] = useState<RecipeSuggestion[]>([]);
+  const [page, setPage] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submittedQuery, setSubmittedQuery] = useState<SubmittedQuery | null>(null);
@@ -59,6 +68,7 @@ function HomePage() {
     setIsLoading(true);
     setError(null);
     setSubmittedQuery({ title, ingredients });
+    setPage(0);
     try {
       const response = await fetchSuggestions(title, ingredients, !applyPreferences);
       setSuggestions(response.suggestions);
@@ -129,6 +139,13 @@ function HomePage() {
     } catch {
       setLikeState(recipeId, wasLiked, previousCount);
     }
+  }
+
+  const pageCount = Math.ceil(suggestions.length / PAGE_SIZE);
+  const visibleSuggestions = suggestions.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
+
+  function handleLoadMore() {
+    setPage((current) => (current + 1) % pageCount);
   }
 
   return (
@@ -238,15 +255,23 @@ function HomePage() {
               ) : (
                 <>
                   <h2 className="mt-8 font-display text-2xl text-craie">
-                    {suggestions.length} alternatives végétariennes
+                    {visibleSuggestions.length} alternatives végétariennes
                   </h2>
                   <div className="mt-6 flex justify-center">
                     <RecipeSuggestionGrid
-                      suggestions={suggestions}
+                      key={page}
+                      suggestions={visibleSuggestions}
                       onToggleWatchlist={user ? handleToggleWatchlist : undefined}
                       onToggleLike={handleToggleLike}
                     />
                   </div>
+                  {pageCount > 1 && (
+                    <div className="mt-8 flex justify-center">
+                      <Button variant="secondary" onClick={handleLoadMore}>
+                        Charger plus de recettes
+                      </Button>
+                    </div>
+                  )}
                 </>
               )}
             </div>

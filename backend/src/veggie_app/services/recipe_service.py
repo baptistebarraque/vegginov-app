@@ -10,7 +10,7 @@ from veggie_app.models.recipe import IngredientEntry, Recipe
 from veggie_app.schemas.recipe import IngredientEntrySchema, RecipeSuggestion
 from veggie_app.services import image_service, like_service
 
-SUGGESTION_COUNT = 4
+SUGGESTION_COUNT = 12
 
 # Cost indicator scale: 1 (cheapest) .. MAX_PRICE_TIER (most expensive),
 # rendered as € symbols in the UI.
