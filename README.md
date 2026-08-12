@@ -75,13 +75,9 @@ at `http://localhost:8000/docs`.
 docker-compose exec backend uv run alembic upgrade head
 ```
 
-### 4. Seed the database with sample vegetarian recipes
 
-```bash
-docker-compose exec backend uv run python -m veggie_app.scripts.seed_db
-```
 
-### 5. Start the frontend (outside Docker for now)
+### 4. Start the frontend (outside Docker for now)
 
 ```bash
 cd frontend
