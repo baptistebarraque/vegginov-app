@@ -78,9 +78,15 @@ def test_liked_recipe_ids_returns_only_this_users_likes(db_session: Session) -> 
 def test_like_counts_aggregates_across_users(db_session: Session) -> None:
     user_a = auth_service.register_user(db_session, "a@example.com", "password")
     user_b = auth_service.register_user(db_session, "b@example.com", "password")
-    liked_twice = Recipe(title="Populaire", ingredients=[], allergens=[], embedding=[0.1] * EMBEDDING_DIM)
-    liked_once = Recipe(title="Discrète", ingredients=[], allergens=[], embedding=[0.1] * EMBEDDING_DIM)
-    liked_never = Recipe(title="Ignorée", ingredients=[], allergens=[], embedding=[0.1] * EMBEDDING_DIM)
+    liked_twice = Recipe(
+        title="Populaire", ingredients=[], allergens=[], embedding=[0.1] * EMBEDDING_DIM
+    )
+    liked_once = Recipe(
+        title="Discrète", ingredients=[], allergens=[], embedding=[0.1] * EMBEDDING_DIM
+    )
+    liked_never = Recipe(
+        title="Ignorée", ingredients=[], allergens=[], embedding=[0.1] * EMBEDDING_DIM
+    )
     db_session.add_all([liked_twice, liked_once, liked_never])
     db_session.flush()
     like_service.add(db_session, user_a.id, liked_twice.id)

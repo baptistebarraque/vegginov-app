@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from veggie_app.database import get_db
 from veggie_app.models.recipe import Recipe
 from veggie_app.models.user import User
-from veggie_app.schemas.like import LikedRecipeResponse, LikeStatusResponse, LikesResponse
+from veggie_app.schemas.like import LikedRecipeResponse, LikesResponse, LikeStatusResponse
 from veggie_app.services import auth_service, image_service, like_service, recipe_service
 
 router = APIRouter(prefix="/likes")
