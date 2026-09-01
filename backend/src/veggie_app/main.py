@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 
 from veggie_app.api.routes import (
     admin_recipes,
+    admin_users,
     auth,
     likes,
     preferences,
@@ -35,6 +36,7 @@ app.add_middleware(
 app.include_router(suggestions.router)
 app.include_router(auth.router)
 app.include_router(admin_recipes.router)
+app.include_router(admin_users.router)
 app.include_router(preferences.router)
 app.include_router(watchlist.router)
 app.include_router(likes.router)
