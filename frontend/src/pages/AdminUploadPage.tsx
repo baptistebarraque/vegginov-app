@@ -107,7 +107,7 @@ function AdminUploadPage() {
             to="/admin/recipes"
             className="text-sm text-pousse transition-colors hover:text-pousse-clair focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pousse"
           >
-            Voir toutes les recettes
+            ← Retour à la liste
           </Link>
         </div>
 

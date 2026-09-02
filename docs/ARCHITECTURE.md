@@ -628,3 +628,52 @@ recipes that won't be shown); `DELETE` returning `204` for watchlist parity
 (rejected — the count is concurrently-mutable, see above); reusing the word
 "favoris" for the UI label (rejected — it's already loosely used for the
 watchlist, so likes use "Coups de cœur" to stay distinct).
+
+---
+
+## Admin users view: read-only, aggregated counts, `/admin` becomes a hub
+
+Date: 2026-09-01
+Context: the admin could see every recipe but had no way to see who had signed
+up. With Phase 4 accounts in place (preferences, watchlist, likes), the admin
+needed a view of the accounts and what each one saved.
+Decision:
+- **No schema change.** The view only reads `users`, `user_preferences`,
+  `watchlist_entries` and `recipe_likes` — no new table, no migration. What the
+  admin sees is derived from rows those features already write.
+- `GET /admin/users` (`AdminUserListItem`: email, role, signup date, watchlist
+  and like counts, a `has_preferences` flag) and `GET /admin/users/{user_id}`
+  (`AdminUserDetail`: the same fields plus the preference profile, the
+  watchlist entries and the liked recipes), both behind the same
+  `require_admin` dependency as `/admin/recipes`. New router module rather than
+  more endpoints in `admin_recipes.py`, which is already multipart/image-shaped
+  and has nothing to do with accounts.
+- **Read-only on purpose**, and `password_hash` is never in a response — a test
+  asserts the string doesn't appear in the list payload. Account changes stay
+  in `/auth/account`, where they are the owner's own action; an admin editing
+  or deleting someone else's account is a bigger decision (audit trail,
+  self-demotion guards) than this view needs to make.
+- **`user_admin_service` aggregates the counts with one grouped query per
+  relation** (`GROUP BY user_id`), so listing N accounts is 4 queries, not
+  1 + 3N — the same batching reasoning as `like_service.like_counts`. The
+  detail path instead reuses `preference_service` / `watchlist_service` /
+  `like_service` unchanged: for a single user there is nothing to batch.
+- Listing is ordered by `id DESC` (newest account first), not `created_at` —
+  within one transaction Postgres freezes `now()`, so accounts inserted
+  back-to-back in a test tie on `created_at`. Same reasoning as
+  `watchlist_service.list_for_user`.
+- **Frontend: `/admin` becomes a hub** ("Recettes" / "Utilisateurs" cards with
+  live counts) and the add-recipe form moves to `/admin/recipes/new`, declared
+  before `/admin/recipes/:id` so "new" isn't parsed as a recipe id. The recipe
+  section is otherwise untouched. `AdminUsersTable` is a separate component
+  from `AdminTable` rather than a generalisation of it — `AdminTable` owns the
+  delete/confirm flow, which has no counterpart in a read-only view.
+Alternatives considered: adding the users endpoints to `admin_recipes.py`
+(rejected — unrelated concern, and that module is multipart-specific); a
+`GET /admin/users?include=preferences` single endpoint (rejected — the list
+would carry every user's full watchlist just to render a table of counts, the
+same wasted payload `RecipeListItem` avoids); keeping `/admin` as the
+add-recipe page with a second link (rejected — the admin now has two real
+sections, and a form is a poor landing page for choosing between them);
+per-user `COUNT` subqueries in the list query (rejected — N+1 as the account
+count grows).

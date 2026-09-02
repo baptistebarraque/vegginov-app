@@ -1,10 +1,13 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router";
 import AccountPage from "./pages/AccountPage";
+import AdminHomePage from "./pages/AdminHomePage";
 import AdminLoginPage from "./pages/AdminLoginPage";
 import AdminRecipeDetailPage from "./pages/AdminRecipeDetailPage";
 import AdminRecipeListPage from "./pages/AdminRecipeListPage";
 import AdminUploadPage from "./pages/AdminUploadPage";
+import AdminUserDetailPage from "./pages/AdminUserDetailPage";
+import AdminUsersPage from "./pages/AdminUsersPage";
 import ConfirmPasswordResetPage from "./pages/ConfirmPasswordResetPage";
 import HomePage from "./pages/HomePage";
 import LikedRecipesPage from "./pages/LikedRecipesPage";
@@ -42,9 +45,13 @@ function AnimatedRoutes() {
           <Route path="/reset-password" element={<RequestPasswordResetPage />} />
           <Route path="/reset-password/confirm" element={<ConfirmPasswordResetPage />} />
           <Route path="/admin/login" element={<AdminLoginPage />} />
-          <Route path="/admin" element={<AdminUploadPage />} />
+          <Route path="/admin" element={<AdminHomePage />} />
           <Route path="/admin/recipes" element={<AdminRecipeListPage />} />
+          {/* Declared before /admin/recipes/:id so "new" is not read as a recipe id. */}
+          <Route path="/admin/recipes/new" element={<AdminUploadPage />} />
           <Route path="/admin/recipes/:id" element={<AdminRecipeDetailPage />} />
+          <Route path="/admin/users" element={<AdminUsersPage />} />
+          <Route path="/admin/users/:id" element={<AdminUserDetailPage />} />
         </Routes>
       </motion.div>
     </AnimatePresence>

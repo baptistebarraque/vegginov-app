@@ -39,6 +39,11 @@ landed — see the "User accounts", "User preferences", "Price budget +
 calorie orientation", "Watchlist", and "Likes" architecture entries below.
 Phase 4 (M1–M4) is complete.
 
+The admin interface has two sections behind `/admin` (a hub page): recipes
+(add/list/edit/delete/import/export, add-recipe now at `/admin/recipes/new`)
+and users — a read-only view of every account, its preferences, watchlist and
+likes. See the "Admin users view" entry in `docs/ARCHITECTURE.md`.
+
 Do not implement features from later phases unless explicitly requested.
 See `docs/ROADMAP.md` for the full phase breakdown.
  
@@ -104,6 +109,7 @@ veggie-app/
 │       ├── schemas/                    # Pydantic request/response models only
 │       │   ├── recipe.py
 │       │   ├── auth.py
+│       │   ├── admin_user.py                # admin's read-only view of accounts
 │       │   ├── preference.py
 │       │   ├── watchlist.py
 │       │   └── like.py
@@ -116,14 +122,16 @@ veggie-app/
 │       │   ├── auth_service.py
 │       │   ├── preference_service.py
 │       │   ├── watchlist_service.py
-│       │   └── like_service.py
+│       │   ├── like_service.py
+│       │   └── user_admin_service.py         # account list/detail for the admin
 │       ├── api/routes/                 # thin routes only
 │       │   ├── suggestions.py          # POST /suggestions (optional auth)
 │       │   ├── auth.py                 # /auth/{signup,login,logout,me,account,password-reset/*}
 │       │   ├── preferences.py          # GET/PUT /preferences
 │       │   ├── watchlist.py            # /watchlist CRUD (require_user)
 │       │   ├── likes.py                # /likes GET + POST/DELETE (require_user)
-│       │   └── admin_recipes.py        # /admin/recipes CRUD + /import (admin-only)
+│       │   ├── admin_recipes.py        # /admin/recipes CRUD + /import (admin-only)
+│       │   └── admin_users.py          # /admin/users list/detail (admin-only, read-only)
 │       └── admin/
 │           ├── add_recipe_cli.py
 │           └── create_admin_cli.py

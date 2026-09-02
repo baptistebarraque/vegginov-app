@@ -99,7 +99,7 @@ function AdminRecipeListPage() {
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
           <Link
-            to="/admin"
+            to="/admin/recipes/new"
             className="inline-flex h-9 items-center rounded-md bg-pousse px-4 text-sm font-medium text-nuit transition-colors hover:bg-pousse-clair focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pousse"
           >
             Ajouter une recette
