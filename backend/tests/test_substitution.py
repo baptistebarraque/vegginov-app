@@ -44,6 +44,30 @@ def test_recipe_protein_vocabulary_is_sorted_and_deduplicated() -> None:
     assert list(RECIPE_PROTEIN_VOCABULARY) == sorted(set(RECIPE_PROTEIN_VOCABULARY))
 
 
+@pytest.mark.parametrize(
+    "protein", ["oeuf", "fromage", "haricots noirs", "haricots blancs", "noix", "quinoa"]
+)
+def test_recipe_protein_vocabulary_covers_native_vegetarian_proteins(protein: str) -> None:
+    """Half the real vegetarian corpus takes its protein from eggs, cheese,
+    beans or nuts rather than from a meat substitute. A value missing here
+    cannot be stored as a recipe's protein_source at all (validate_protein_source
+    rejects it), which would leave those recipes permanently untagged."""
+    assert protein in RECIPE_PROTEIN_VOCABULARY
+
+
+@pytest.mark.parametrize(
+    "protein", ["oeuf", "fromage", "haricots noirs", "haricots blancs", "noix", "quinoa"]
+)
+def test_native_vegetarian_proteins_beat_the_unknown_pair_default(protein: str) -> None:
+    """Each of these must relate to at least one meat, not sit at the default.
+    ingredients_view.py skips the protein view entirely for a recipe with no
+    protein_source, so an untagged recipe scores neutrally; a tagged one whose
+    protein matches nothing would score DEFAULT_PROTEIN_SIMILARITY and rank
+    *below* it. Tagging must not be a penalty."""
+    best = max(protein_similarity(meat, protein) for meat in SUBSTITUTION_TABLE)
+    assert best > DEFAULT_PROTEIN_SIMILARITY
+
+
 def test_recipe_protein_vocabulary_covers_every_table_substitute() -> None:
     all_substitutes = {name for entries in SUBSTITUTION_TABLE.values() for name, _ in entries}
     assert set(RECIPE_PROTEIN_VOCABULARY) == all_substitutes

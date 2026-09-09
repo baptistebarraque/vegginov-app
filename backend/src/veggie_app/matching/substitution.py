@@ -9,6 +9,20 @@ target texture, specialized substitutes reserved for cases where texture is
 decisive. Assumes an ovo-lacto-vegetarian app (eggs/dairy allowed, only
 meat/fish are substituted) — consistent with docs/ROADMAP.md, which keeps
 a vegan extension as a separate later phase.
+
+Eggs, cheese, nuts, quinoa and the non-red beans sit lower (0.30-0.55) and are
+listed for a different reason than the rest: they are rarely chosen as a
+*texture* replacement, but they are what actually carries the protein in half
+of the real vegetarian corpus (measured on the 4087-recipe Epicurious import —
+only 12% of those recipes contain one of the meat-substitute values, while ~50%
+run on egg/cheese/beans/nuts). They have to appear here because
+RECIPE_PROTEIN_VOCABULARY is derived from this table's values: a value absent
+from it cannot be stored as a recipe's protein_source at all. Leaving them out
+was worse than a missing tag — ingredients_view.py skips the protein view
+entirely when a recipe has no protein_source, so an untagged recipe scores
+neutrally while a tagged one with no table entry would score
+DEFAULT_PROTEIN_SIMILARITY. Tagging half the corpus without these entries would
+therefore have pushed exactly those recipes *down* the ranking.
 """
 
 import numpy as np
@@ -18,23 +32,27 @@ SUBSTITUTION_TABLE: dict[str, list[tuple[str, float]]] = {
     # --- Red meats ---
     "boeuf": [
         ("seitan", 0.90), ("champignon", 0.85), ("lentilles", 0.65),
-        ("haricots rouges", 0.60), ("tofu", 0.55), ("pois chiches", 0.45),
+        ("haricots rouges", 0.60), ("tofu", 0.55), ("haricots noirs", 0.55),
+        ("haricots blancs", 0.50), ("pois chiches", 0.45), ("noix", 0.40),
+        ("oeuf", 0.30), ("fromage", 0.30),
     ],
     "viande hachee": [
         ("proteines de soja texturees", 0.85), ("lentilles corail", 0.80),
         ("champignons haches", 0.75), ("haricots rouges", 0.75),
-        ("seitan hache", 0.70), ("tofu emiette", 0.65),
+        ("haricots noirs", 0.70), ("seitan hache", 0.70), ("tofu emiette", 0.65),
+        ("quinoa", 0.50), ("oeuf", 0.30),
     ],
     "agneau": [
         ("champignon", 0.75), ("seitan", 0.75), ("pois chiches", 0.65),
-        ("haricots rouges", 0.60), ("aubergine", 0.55),
+        ("haricots rouges", 0.60), ("haricots blancs", 0.55), ("aubergine", 0.55),
     ],
     "veau": [
         ("seitan", 0.70), ("champignon", 0.65), ("tofu", 0.60), ("pois chiches", 0.50),
+        ("oeuf", 0.40), ("fromage", 0.40),
     ],
     "porc": [
         ("seitan", 0.75), ("champignon", 0.70), ("tempeh", 0.65),
-        ("tofu fume", 0.65), ("jacque", 0.60),
+        ("tofu fume", 0.65), ("jacque", 0.60), ("haricots blancs", 0.55),
     ],
     # --- Processed meats ---
     "bacon": [
@@ -46,18 +64,22 @@ SUBSTITUTION_TABLE: dict[str, list[tuple[str, float]]] = {
     ],
     "saucisse": [
         ("seitan epice", 0.80), ("proteines de soja texturees", 0.75),
-        ("haricots rouges epices", 0.55),
+        ("haricots rouges epices", 0.55), ("haricots blancs", 0.55),
     ],
     "jambon": [
         ("tofu fume", 0.65), ("seitan", 0.60), ("champignon", 0.55),
+        ("fromage", 0.50), ("oeuf", 0.45),
     ],
     # --- Poultry ---
     "poulet": [
         ("tofu", 0.80), ("seitan", 0.80), ("jacque", 0.75),
-        ("pois chiches", 0.65), ("champignon", 0.55),
+        ("pois chiches", 0.65), ("champignon", 0.55), ("oeuf", 0.50),
+        ("fromage", 0.45), ("quinoa", 0.45), ("haricots blancs", 0.45),
+        ("noix", 0.40),
     ],
     "dinde": [
         ("seitan", 0.80), ("tofu", 0.75), ("pois chiches", 0.60),
+        ("oeuf", 0.45), ("quinoa", 0.45),
     ],
     # --- Fish and seafood ---
     "poisson blanc": [
