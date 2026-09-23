@@ -14,6 +14,7 @@ module's pure functions with a fake vocabulary/embeddings dict injected).
 import csv
 import logging
 import pickle
+import unicodedata
 from functools import lru_cache
 
 import numpy as np
@@ -26,9 +27,10 @@ EMBEDDINGS_FILENAME = "embeddings.pickle"
 NODES_FILENAME = "nodes.csv"
 INGREDIENT_NODE_TYPE = "ingredient"
 
-# Source-language (French) -> FlavorGraph English vocabulary. Keys are exact
-# ingredient strings (get_vector lowercases before lookup, no other
-# normalization) — as messy/descriptive as the recipe database's actual
+# Source-language (French) -> FlavorGraph English vocabulary. Keys are matched
+# case- and accent-insensitively (get_vector normalizes both sides via
+# `_normalize`), so write them accented and lowercase as the language does —
+# as messy/descriptive as the recipe database's actual
 # `ingredients[].name` values ("carottes coupées en dés", not just
 # "carotte"), since that's what's actually looked up at query/candidate
 # time. Every value below was checked against the real nodes.csv (only
@@ -652,17 +654,52 @@ def _load_ingredient_name_to_id() -> dict[str, str]:
     return name_to_id
 
 
+def _normalize(text: str) -> str:
+    """Lowercase and strip diacritics ("Épinards" -> "epinards").
+
+    Accents are the single most common way a correct ingredient name fails to
+    match: a recipe written as "epinards" describes exactly the same thing as
+    the map's "épinards", and a miss here is *silent* — get_vector returns
+    None, ingredient_set_similarity drops the ingredient, and the recipe just
+    ranks slightly worse forever. Matching on this form instead of the raw
+    string removes that whole class of failure."""
+    return "".join(
+        character
+        for character in unicodedata.normalize("NFD", text.lower())
+        if unicodedata.category(character) != "Mn"
+    )
+
+
+@lru_cache(maxsize=1)
+def _normalized_source_to_flavorgraph() -> dict[str, str]:
+    """SOURCE_TO_FLAVORGRAPH re-keyed by `_normalize`, built once and cached.
+
+    Safe to collapse the keys this way: no two entries normalize to the same
+    string while pointing at different FlavorGraph concepts (the only pair that
+    collides, "creme fraiche"/"crème fraîche", already maps to one concept), so
+    this loses no information the exact-string lookup had."""
+    return {_normalize(key): value for key, value in SOURCE_TO_FLAVORGRAPH.items()}
+
+
 def get_vector(
     ingredient: str, mapping: dict[str, str] = SOURCE_TO_FLAVORGRAPH
 ) -> np.ndarray | None:
     """Looks up `ingredient`'s FlavorGraph embedding, translating from the
-    app's source-language vocabulary first. Returns None (never raises) for
+    app's source-language vocabulary first. Matching is case- and
+    accent-insensitive (see `_normalize`). Returns None (never raises) for
     anything unmapped or unresolvable — including the data files themselves
     being absent (they're a manually-downloaded, gitignored asset, not
     present in CI or a fresh clone) — callers filter these out rather than
     fail a whole similarity computation over one obscure ingredient or a
     missing optional dataset, but the miss is logged so gaps stay visible."""
-    en_name = mapping.get(ingredient.lower())
+    # The default mapping's normalized form is cached; an injected one (tests)
+    # is small enough that rebuilding it per call costs nothing.
+    normalized_mapping = (
+        _normalized_source_to_flavorgraph()
+        if mapping is SOURCE_TO_FLAVORGRAPH
+        else {_normalize(key): value for key, value in mapping.items()}
+    )
+    en_name = normalized_mapping.get(_normalize(ingredient))
     if en_name is None:
         logger.info("aucune correspondance FlavorGraph pour l'ingrédient : %r", ingredient)
         return None

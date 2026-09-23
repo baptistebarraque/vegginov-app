@@ -78,3 +78,47 @@ def test_get_vector_uses_default_source_to_flavorgraph_mapping() -> None:
 
     assert vector is not None
     assert list(vector) == [1.0, 0.0, 0.0]
+
+
+def test_get_vector_ignores_missing_accents() -> None:
+    """The map spells it "épinards"; a recipe may well spell it "epinards".
+    That used to resolve to None and silently drop the ingredient out of
+    similarity scoring — the failure this whole normalization exists to stop."""
+    monkeypatched = {"épinards": "onion"}
+
+    assert get_vector("epinards", mapping=monkeypatched) is not None
+
+
+def test_get_vector_ignores_spurious_accents() -> None:
+    """The reverse direction: an accent the map doesn't have must not break
+    the lookup either, so neither side is the "correct" spelling."""
+    monkeypatched = {"quinoa": "onion"}
+
+    assert get_vector("quínoa", mapping=monkeypatched) is not None
+
+
+def test_get_vector_matches_accented_default_vocabulary_without_accents() -> None:
+    """End-to-end on the real SOURCE_TO_FLAVORGRAPH rather than a fixture:
+    the map spells this entry "oignon émincé", and the unaccented spelling has
+    to reach the same vector. (This key is used because it carries accents
+    *and* resolves to one of the stubbed concepts above.)"""
+    accented = get_vector("oignon émincé")
+    unaccented = get_vector("oignon emince")
+
+    assert accented is not None
+    assert unaccented is not None
+    assert list(accented) == list(unaccented)
+
+
+def test_normalizing_the_vocabulary_loses_no_distinct_concept() -> None:
+    """Guard on the assumption `_normalized_source_to_flavorgraph` is built on:
+    collapsing keys by accent must never merge two entries that point at
+    different FlavorGraph concepts, or one of them would become unreachable.
+    Adding such a pair to the map should fail here, not silently mis-rank."""
+    by_normalized: dict[str, set[str]] = {}
+    for key, concept in flavorgraph.SOURCE_TO_FLAVORGRAPH.items():
+        by_normalized.setdefault(flavorgraph._normalize(key), set()).add(concept)
+
+    collisions = {key: concepts for key, concepts in by_normalized.items() if len(concepts) > 1}
+
+    assert collisions == {}
