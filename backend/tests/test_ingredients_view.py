@@ -89,3 +89,16 @@ def test_prepared_query_is_reused_across_candidates(matrix_calls: list[list[str]
     # One matrix for the query, then one per candidate — the query's rest
     # ingredients are never resolved again.
     assert matrix_calls == [["carotte"], ["curry"], ["lait de coco"], ["riz"]]
+
+
+def test_excludes_candidate_protein_source_whatever_its_spelling(
+    matrix_calls: list[list[str]],
+) -> None:
+    # protein_source uses the unaccented vocabulary, the ingredient list doesn't.
+    ingredients_view_score(
+        query_ingredients=["carotte"],
+        candidate_ingredients=["œufs", "poireau"],
+        candidate_protein_source="oeuf",
+    )
+
+    assert matrix_calls[-1] == ["poireau"]

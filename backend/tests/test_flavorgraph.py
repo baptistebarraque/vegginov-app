@@ -3,6 +3,7 @@ import pytest
 
 from veggie_app.matching import flavorgraph
 from veggie_app.matching.flavorgraph import FlavorGraphDataError, get_vector
+from veggie_app.matching.ingredient_names import canonical_name
 
 FAKE_MAPPING = {"oignon": "onion", "carotte": "carrot"}
 FAKE_NAME_TO_ID = {"onion": "101", "carrot": "202"}
@@ -110,15 +111,61 @@ def test_get_vector_matches_accented_default_vocabulary_without_accents() -> Non
     assert list(accented) == list(unaccented)
 
 
-def test_normalizing_the_vocabulary_loses_no_distinct_concept() -> None:
-    """Guard on the assumption `_normalized_source_to_flavorgraph` is built on:
-    collapsing keys by accent must never merge two entries that point at
-    different FlavorGraph concepts, or one of them would become unreachable.
-    Adding such a pair to the map should fail here, not silently mis-rank."""
-    by_normalized: dict[str, set[str]] = {}
+def test_canonicalizing_the_vocabulary_loses_no_distinct_concept() -> None:
+    """Guard on the assumption `_canonical_source_to_flavorgraph` is built on:
+    collapsing keys by canonical form (accents, plurals, quantities) must never
+    merge two entries that point at different FlavorGraph concepts, or one of
+    them would become unreachable. Adding such a pair to the map should fail
+    here, not silently mis-rank."""
+    by_canonical: dict[str, set[str]] = {}
     for key, concept in flavorgraph.SOURCE_TO_FLAVORGRAPH.items():
-        by_normalized.setdefault(flavorgraph._normalize(key), set()).add(concept)
+        by_canonical.setdefault(canonical_name(key), set()).add(concept)
 
-    collisions = {key: concepts for key, concepts in by_normalized.items() if len(concepts) > 1}
+    collisions = {key: concepts for key, concepts in by_canonical.items() if len(concepts) > 1}
 
     assert collisions == {}
+
+
+def test_get_vector_matches_plurals_and_ligatures() -> None:
+    mapping = {"oignon": "onion", "bœuf": "carrot"}
+
+    assert get_vector("oignons", mapping=mapping) is not None
+    assert get_vector("boeufs", mapping=mapping) is not None
+
+
+def test_get_vector_falls_back_to_the_head_noun() -> None:
+    vector = get_vector("oignons rouges émincés", mapping=FAKE_MAPPING)
+
+    assert vector is not None
+    assert list(vector) == [1.0, 0.0, 0.0]
+
+
+def test_get_vector_prefers_the_longest_known_form() -> None:
+    mapping = {"oignon": "onion", "oignon rouge": "carrot"}
+
+    vector = get_vector("oignons rouges émincés", mapping=mapping)
+
+    assert vector is not None
+    assert list(vector) == [0.0, 1.0, 0.0]  # "oignon rouge", not "oignon"
+
+
+@pytest.mark.parametrize(
+    ("written", "concept"),
+    [
+        # Compounds whose meaning is the complement, not the head noun: they
+        # must be keys of their own, or the head-noun fallback would resolve
+        # them to the wrong ingredient (walnut, butter, pasta, milk...).
+        ("noix de coco", "coconut"),
+        ("beurre de cacahuète", "peanut_butter"),
+        ("lait de coco", "coconut_milk"),
+        ("pâte à pain", "bread_dough"),
+        ("pâtes à lasagne", "lasagna_noodle"),
+        ("pommes de terre nouvelles", "potato"),
+        ("noix de muscade", "nutmeg"),
+        ("crème de coco", "coconut_milk"),
+    ],
+)
+def test_real_vocabulary_resolves_compounds_to_the_right_concept(
+    written: str, concept: str
+) -> None:
+    assert flavorgraph._lookup(written, flavorgraph._canonical_source_to_flavorgraph()) == concept

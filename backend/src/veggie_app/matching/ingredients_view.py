@@ -22,6 +22,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from veggie_app.matching.ingredient_names import canonical_name
 from veggie_app.matching.ingredient_similarity import ingredient_matrix, matrix_set_similarity
 from veggie_app.matching.substitution import (
     protein_set_similarity,
@@ -45,9 +46,12 @@ def prepare_query_ingredients(query_ingredients: list[str]) -> PreparedQueryIngr
 
 
 def _exclude_protein_source(ingredients: list[str], protein_source: str | None) -> list[str]:
+    # Compared on canonical forms: protein_source is written in the unaccented
+    # protein vocabulary ("oeuf") while the ingredient list says "œuf".
     if protein_source is None:
         return ingredients
-    return [name for name in ingredients if name.lower() != protein_source.lower()]
+    protein = canonical_name(protein_source)
+    return [name for name in ingredients if canonical_name(name) != protein]
 
 
 def prepared_ingredients_view_score(

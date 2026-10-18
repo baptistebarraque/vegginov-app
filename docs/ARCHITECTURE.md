@@ -765,3 +765,65 @@ the repo, and the DB is what users are actually ranked against); scoring in
 pytest with thresholds (rejected — quality is a number to track, not a
 pass/fail gate, until there is a baseline worth protecting).
 
+---
+
+## Query recognition: canonical names, head-noun fallback, meat-first proteins
+
+Date: 2026-10-15
+Context: Measured on the judged query set, 29% of the ingredients users type
+were silently dropped (no protein match, no FlavorGraph vector) and only 21 of
+289 were recognised as proteins, though nearly every query names a meat.
+Causes: exact-string lookups defeated by "œ" ("bœuf"), plurals ("tomates"),
+leading quantities, meats named inside a phrase ("blanc de poulet", "épaule
+d'agneau"), cuts and species absent from the table (steak, chorizo, cabillaud)
+and a few everyday words missing from the map (parmesan, crème, piment).
+Decision:
+- **One canonical form** (`matching/ingredient_names.canonical_name`: case,
+  accents, ligatures, apostrophes, hyphens, leading quantity, regular French
+  plurals), applied to both sides of every lookup — FlavorGraph map, protein
+  vocabulary, the candidate's own `protein_source` exclusion. Tests guard that
+  canonicalizing merges no two entries with different meanings.
+- **FlavorGraph head-noun fallback**: an unknown name is retried with trailing
+  words dropped, longest first ("champignons de Paris" -> "champignon"),
+  since French modifiers follow the noun. Compounds whose meaning is the
+  complement ("noix de coco", "pâte à pain") must therefore be keys of their
+  own; a test pins the known traps. 30 everyday keys added, each checked
+  against `nodes.csv` (reblochon -> camembert_cheese, the closest node;
+  ras el hanout left unmapped, no fitting node).
+- **Protein detection** (`substitution.detect_query_protein`): exact canonical
+  match, then `QUERY_PROTEIN_ALIASES` (cuts/species onto existing table keys —
+  no new scores invented), then a meat/fish term *inside* the name, longest
+  first, except under a stock/sauce/fat head ("bouillon de poulet").
+  Vegetarian substitutes match whole names only ("noix de coco" is not the
+  protein "noix").
+- **Meat first**: when a query names a meat or fish, only those terms are its
+  proteins; eggs/beans/mushrooms in the same list are ordinary ingredients.
+  Without it, recognising "œufs" in a tonkatsu gave every egg recipe a perfect
+  protein match.
+- **Substitute variants fall back to their generic form**
+  (`SUBSTITUTE_BASES`, e.g. "champignon pleurote" -> "champignon") when a pair
+  has no score of its own; a specific score always wins.
+Result: dropped ingredients 29% -> 1% (only "confit de canard" and "ras el
+hanout" left); a protein is now found in all 48 queries that list ingredients
+(57 of 289 ingredients act as proteins after meat-first, was 21). Ranking
+vs the 2026-10-15 baseline: hit@4 0.923 -> 0.942, ideal@4 unchanged, but MRR
+0.899 -> 0.865 and nDCG@12 0.651 -> 0.619. Recognising the meat exposed 8
+substitution-table gaps that now score DEFAULT_PROTEIN_SIMILARITY (e.g.
+boeuf -> jacque, viande hachee -> lentilles); previously the protein view was
+simply skipped for those queries. Those 8 pairs were scored on 2026-10-17
+with the user's approval (boeuf: jacque 0.60, proteines de soja texturees
+0.75; viande hachee: lentilles 0.75, seitan 0.70, champignon 0.70; porc and
+crevettes: tofu 0.60; lardons: oeuf 0.40). Final, vs baseline: hit@4 0.962,
+ideal@4 0.896, MRR 0.893 (flat), nDCG@12 0.663, recall@12 0.531. Caveat: the
+pairs were found *through* the judged set, so these numbers flatter it
+slightly. Remaining losses (carbonade, cassoulet, tikka masala, pho) are the
+protein view preferring the best texture substitute (seitan, tofu) over the
+same dish — a weighting/dish-structure problem, not recognition.
+Alternatives considered: fuzzy string matching (rejected — the CIQUAL work
+showed fuzzy food-name matching fails silently and badly, e.g. "beurre" ->
+"haricot beurre"); a French lemmatizer/NLP dependency (rejected — a new
+heavy dependency for what a dozen lines of plural rules cover, applied
+symmetrically); detecting vegetarian substitutes inside names (rejected —
+misfires on compounds); keeping every detected protein in a meat query
+(rejected — measured regression, see "meat first").
+

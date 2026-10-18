@@ -25,22 +25,26 @@ DEFAULT_PROTEIN_SIMILARITY. Tagging half the corpus without these entries would
 therefore have pushed exactly those recipes *down* the ranking.
 """
 
+from functools import lru_cache
+
 import numpy as np
 from scipy.optimize import linear_sum_assignment
+
+from veggie_app.matching.ingredient_names import canonical_name
 
 SUBSTITUTION_TABLE: dict[str, list[tuple[str, float]]] = {
     # --- Red meats ---
     "boeuf": [
-        ("seitan", 0.90), ("champignon", 0.85), ("lentilles", 0.65),
-        ("haricots rouges", 0.60), ("tofu", 0.55), ("haricots noirs", 0.55),
-        ("haricots blancs", 0.50), ("pois chiches", 0.45), ("noix", 0.40),
-        ("oeuf", 0.30), ("fromage", 0.30),
+        ("seitan", 0.90), ("champignon", 0.85), ("proteines de soja texturees", 0.75),
+        ("lentilles", 0.65), ("haricots rouges", 0.60), ("jacque", 0.60),
+        ("tofu", 0.55), ("haricots noirs", 0.55), ("haricots blancs", 0.50),
+        ("pois chiches", 0.45), ("noix", 0.40), ("oeuf", 0.30), ("fromage", 0.30),
     ],
     "viande hachee": [
         ("proteines de soja texturees", 0.85), ("lentilles corail", 0.80),
-        ("champignons haches", 0.75), ("haricots rouges", 0.75),
-        ("haricots noirs", 0.70), ("seitan hache", 0.70), ("tofu emiette", 0.65),
-        ("quinoa", 0.50), ("oeuf", 0.30),
+        ("champignons haches", 0.75), ("haricots rouges", 0.75), ("lentilles", 0.75),
+        ("haricots noirs", 0.70), ("seitan hache", 0.70), ("seitan", 0.70),
+        ("champignon", 0.70), ("tofu emiette", 0.65), ("quinoa", 0.50), ("oeuf", 0.30),
     ],
     "agneau": [
         ("champignon", 0.75), ("seitan", 0.75), ("pois chiches", 0.65),
@@ -52,7 +56,7 @@ SUBSTITUTION_TABLE: dict[str, list[tuple[str, float]]] = {
     ],
     "porc": [
         ("seitan", 0.75), ("champignon", 0.70), ("tempeh", 0.65),
-        ("tofu fume", 0.65), ("jacque", 0.60), ("haricots blancs", 0.55),
+        ("tofu fume", 0.65), ("jacque", 0.60), ("tofu", 0.60), ("haricots blancs", 0.55),
     ],
     # --- Processed meats ---
     "bacon": [
@@ -61,6 +65,7 @@ SUBSTITUTION_TABLE: dict[str, list[tuple[str, float]]] = {
     ],
     "lardons": [
         ("tempeh fume", 0.80), ("tofu fume", 0.70), ("champignons shiitake seches", 0.55),
+        ("oeuf", 0.40),
     ],
     "saucisse": [
         ("seitan epice", 0.80), ("proteines de soja texturees", 0.75),
@@ -92,7 +97,7 @@ SUBSTITUTION_TABLE: dict[str, list[tuple[str, float]]] = {
         ("pois chiches ecrases", 0.70), ("tomate marinee", 0.55), ("jacque", 0.50),
     ],
     "crevettes": [
-        ("champignon pleurote", 0.70), ("coeur de palmier", 0.65),
+        ("champignon pleurote", 0.70), ("coeur de palmier", 0.65), ("tofu", 0.60),
     ],
     "moules": [
         ("champignon pleurote", 0.60), ("coeur de palmier", 0.55),
@@ -113,23 +118,55 @@ RECIPE_PROTEIN_VOCABULARY: tuple[str, ...] = tuple(
 DEFAULT_PROTEIN_SIMILARITY = 0.1
 
 
-def protein_similarity(
-    protein_a: str, protein_b: str, table: dict[str, list[tuple[str, float]]] = SUBSTITUTION_TABLE
-) -> float:
-    """Looks up how good a substitute `protein_b` is for `protein_a` (or vice
-    versa — the table is consulted in both directions since either side of a
-    comparison could be the meat/fish key or one of its substitutes).
-    Returns `DEFAULT_PROTEIN_SIMILARITY` for a pair with no table entry."""
-    a, b = protein_a.lower(), protein_b.lower()
-    if a == b:
-        return 1.0
+# A specific form of a substitute -> the generic substitute it is a form of.
+# The table scores the generic ones against most meats but each specific form
+# only against a few ("champignon pleurote" is scored for fish and seafood,
+# not for chicken), so a pair with no score of its own falls back to its
+# generic form's score rather than to DEFAULT_PROTEIN_SIMILARITY — a pleurote
+# is at least as good a stand-in for chicken as "champignon".
+SUBSTITUTE_BASES: dict[str, str] = {
+    "tofu ferme": "tofu",
+    "tofu emiette": "tofu",
+    "tofu fume": "tofu",
+    "seitan hache": "seitan",
+    "seitan epice": "seitan",
+    "tempeh fume": "tempeh",
+    "champignon pleurote": "champignon",
+    "champignons haches": "champignon",
+    "champignons shiitake seches": "champignon",
+    "haricots rouges epices": "haricots rouges",
+    "pois chiches ecrases": "pois chiches",
+    "lentilles corail": "lentilles",
+}
+
+
+def _table_score(a: str, b: str, table: dict[str, list[tuple[str, float]]]) -> float | None:
     for name, score in table.get(a, []):
         if name == b:
             return score
     for name, score in table.get(b, []):
         if name == a:
             return score
-    return DEFAULT_PROTEIN_SIMILARITY
+    return None
+
+
+def protein_similarity(
+    protein_a: str, protein_b: str, table: dict[str, list[tuple[str, float]]] = SUBSTITUTION_TABLE
+) -> float:
+    """Looks up how good a substitute `protein_b` is for `protein_a` (or vice
+    versa — the table is consulted in both directions since either side of a
+    comparison could be the meat/fish key or one of its substitutes). A pair
+    with no entry of its own is retried with each side's generic form
+    (SUBSTITUTE_BASES); only then does it get `DEFAULT_PROTEIN_SIMILARITY`."""
+    a, b = protein_a.lower(), protein_b.lower()
+    if a == b:
+        return 1.0
+    score = _table_score(a, b, table)
+    if score is None:
+        base_a, base_b = SUBSTITUTE_BASES.get(a, a), SUBSTITUTE_BASES.get(b, b)
+        if (base_a, base_b) != (a, b):
+            score = 1.0 if base_a == base_b else _table_score(base_a, base_b, table)
+    return DEFAULT_PROTEIN_SIMILARITY if score is None else score
 
 
 # Vocabulary used to detect which word(s) in a user's *query* ingredient list
@@ -141,14 +178,125 @@ QUERY_PROTEIN_VOCABULARY: frozenset[str] = frozenset(SUBSTITUTION_TABLE.keys()) 
 )
 
 
-def split_query_ingredients_by_role(
-    ingredients: list[str], vocabulary: frozenset[str] = QUERY_PROTEIN_VOCABULARY
-) -> tuple[list[str], list[str]]:
-    """Splits a user's raw ingredient list into (protein-like, rest). Only
-    needed for the query side — a candidate recipe already has its protein
-    tagged explicitly via protein_source, no detection required."""
-    proteins = [ingredient for ingredient in ingredients if ingredient.lower() in vocabulary]
-    rest = [ingredient for ingredient in ingredients if ingredient.lower() not in vocabulary]
+# What users actually type for the meats/fish the table knows: cuts, minced
+# forms, named sausages, species. Each maps onto an existing SUBSTITUTION_TABLE
+# key, so it reuses that key's curated substitutes — a meat with no fitting key
+# (duck, rabbit...) belongs in the table with its own scores, not here.
+QUERY_PROTEIN_ALIASES: dict[str, str] = {
+    # --- Beef cuts ---
+    "steak": "boeuf",
+    "entrecôte": "boeuf",
+    "bavette": "boeuf",
+    "rumsteck": "boeuf",
+    "faux-filet": "boeuf",
+    "paleron": "boeuf",
+    "macreuse": "boeuf",
+    # --- Minced meat ---
+    "steak haché": "viande hachee",
+    "bœuf haché": "viande hachee",
+    "porc haché": "viande hachee",
+    "veau haché": "viande hachee",
+    "agneau haché": "viande hachee",
+    "chair à saucisse": "saucisse",
+    # --- Sausages and cured pork ---
+    "chorizo": "saucisse",
+    "merguez": "saucisse",
+    "chipolata": "saucisse",
+    "saucisson": "saucisse",
+    "lard": "lardons",
+    "poitrine fumée": "lardons",
+    "pancetta": "lardons",
+    "guanciale": "lardons",
+    "prosciutto": "jambon",
+    # --- Poultry ---
+    "volaille": "poulet",
+    # --- Fish ---
+    "poisson": "poisson blanc",
+    "cabillaud": "poisson blanc",
+    "colin": "poisson blanc",
+    "merlu": "poisson blanc",
+    "lieu": "poisson blanc",
+    "églefin": "poisson blanc",
+    "haddock": "poisson blanc",
+    "dorade": "poisson blanc",
+    "daurade": "poisson blanc",
+    "bar": "poisson blanc",
+    "sole": "poisson blanc",
+    "lotte": "poisson blanc",
+    "truite": "saumon",
+    # --- Seafood ---
+    "gambas": "crevettes",
+    "fruits de mer": "crevettes",
+}
+
+# Head nouns of ingredients that merely *taste of* a meat — a stock, a sauce,
+# a fat. "bouillon de poulet" names chicken but carries no chicken protein.
+_FLAVORING_HEADS = frozenset(
+    canonical_name(head)
+    for head in ("bouillon", "cube", "fond", "fumet", "jus", "graisse", "sauce")
+)
+
+
+@lru_cache(maxsize=1)
+def _query_protein_index() -> tuple[dict[str, str], list[tuple[list[str], str]]]:
+    """(exact, embedded), keyed by canonical_name. `exact` resolves a whole
+    ingredient name — any table key, substitute or alias — to the term
+    protein_similarity looks up. `embedded` lists the meat/fish terms that
+    also count when they appear *inside* a longer name ("cuisses de poulet"),
+    longest first so "boeuf hache" wins over "boeuf". Substitutes are
+    deliberately exact-only: matched inside a name they misfire on everyday
+    compounds ("noix de coco" is not the protein "noix")."""
+    exact = {canonical_name(term): term for term in QUERY_PROTEIN_VOCABULARY}
+    exact.update({canonical_name(alias): key for alias, key in QUERY_PROTEIN_ALIASES.items()})
+    meat_terms = {canonical_name(term) for term in (*SUBSTITUTION_TABLE, *QUERY_PROTEIN_ALIASES)}
+    embedded = sorted(
+        ((term.split(), exact[term]) for term in meat_terms), key=lambda pair: -len(pair[0])
+    )
+    return exact, embedded
+
+
+def _contains_words(words: list[str], term: list[str]) -> bool:
+    return any(words[i : i + len(term)] == term for i in range(len(words) - len(term) + 1))
+
+
+def detect_query_protein(ingredient: str) -> str | None:
+    """The protein term (a SUBSTITUTION_TABLE key or substitute) a query
+    ingredient names, or None. Spelling-insensitive (canonical_name): "Bœuf"
+    and "boeufs" both resolve to "boeuf", "blanc de poulet" to "poulet",
+    "saucisses de Toulouse" to "saucisse", "steak haché" to "viande hachee"."""
+    exact, embedded = _query_protein_index()
+    canonical = canonical_name(ingredient)
+    if canonical in exact:
+        return exact[canonical]
+    words = canonical.split()
+    if not words or words[0] in _FLAVORING_HEADS:
+        return None
+    for term, key in embedded:
+        if _contains_words(words, term):
+            return key
+    return None
+
+
+def split_query_ingredients_by_role(ingredients: list[str]) -> tuple[list[str], list[str]]:
+    """Splits a user's raw ingredient list into (protein terms, rest). The
+    proteins come back as the terms protein_similarity looks up (see
+    detect_query_protein), each once; the rest keep the user's wording for the
+    FlavorGraph lookup. Only needed for the query side — a candidate recipe
+    already has its protein tagged explicitly via protein_source."""
+    detected = [(ingredient, detect_query_protein(ingredient)) for ingredient in ingredients]
+    # When the dish names a meat or fish, that is the protein to replace: the
+    # egg in a tonkatsu batter or the beans of a chili are ordinary ingredients
+    # of the dish, and treating them as its protein would hand every egg or
+    # bean recipe a perfect protein match. Without any meat (a query that is
+    # already vegetarian), the vegetarian proteins are the ones to compare.
+    names_meat = any(protein in SUBSTITUTION_TABLE for _, protein in detected)
+    proteins: list[str] = []
+    rest: list[str] = []
+    for ingredient, protein in detected:
+        if protein is None or (names_meat and protein not in SUBSTITUTION_TABLE):
+            rest.append(ingredient)
+        elif protein not in proteins:
+            proteins.append(protein)
     return proteins, rest
 
 

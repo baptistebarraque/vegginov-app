@@ -1,10 +1,15 @@
 import pytest
 
+from veggie_app.matching.ingredient_names import canonical_name
 from veggie_app.matching.substitution import (
     DEFAULT_PROTEIN_SIMILARITY,
+    QUERY_PROTEIN_ALIASES,
     QUERY_PROTEIN_VOCABULARY,
     RECIPE_PROTEIN_VOCABULARY,
+    SUBSTITUTE_BASES,
     SUBSTITUTION_TABLE,
+    _query_protein_index,
+    detect_query_protein,
     protein_set_similarity,
     protein_similarity,
     split_query_ingredients_by_role,
@@ -88,7 +93,8 @@ def test_split_query_ingredients_by_role_separates_protein_from_rest() -> None:
 def test_split_query_ingredients_by_role_is_case_insensitive() -> None:
     proteins, _rest = split_query_ingredients_by_role(["BOEUF"])
 
-    assert proteins == ["BOEUF"]
+    # Returned as the term protein_similarity looks up, not as typed.
+    assert proteins == ["boeuf"]
 
 
 def test_split_query_ingredients_by_role_handles_no_protein() -> None:
@@ -124,3 +130,129 @@ def test_protein_set_similarity_finds_optimal_assignment_between_several_on_each
     score = protein_set_similarity(["boeuf", "poulet"], ["tofu", "seitan"])
 
     assert score == pytest.approx((0.90 + 0.80) / 2)
+
+
+
+@pytest.mark.parametrize(
+    ("written", "term"),
+    [
+        ("bœuf", "boeuf"),
+        ("Boeufs", "boeuf"),
+        ("crevette", "crevettes"),
+        ("viande hachée", "viande hachee"),
+        ("œufs", "oeuf"),
+        ("Pois chiche", "pois chiches"),
+    ],
+)
+def test_detect_query_protein_ignores_spelling(written: str, term: str) -> None:
+    assert detect_query_protein(written) == term
+
+
+@pytest.mark.parametrize(
+    ("written", "term"),
+    [
+        ("blanc de poulet", "poulet"),
+        ("cuisses de poulet", "poulet"),
+        ("épaule d'agneau", "agneau"),
+        ("saucisses de Toulouse", "saucisse"),
+        ("lardons fumés", "lardons"),
+        ("thon en boîte", "thon"),
+    ],
+)
+def test_detect_query_protein_finds_a_meat_inside_a_longer_name(written: str, term: str) -> None:
+    assert detect_query_protein(written) == term
+
+
+@pytest.mark.parametrize(
+    ("written", "term"),
+    [
+        ("chorizo", "saucisse"),
+        ("cabillaud", "poisson blanc"),
+        ("steak de bœuf", "boeuf"),
+        # The longest term wins: minced, not just "steak"/"boeuf".
+        ("steak haché", "viande hachee"),
+        ("bœuf haché", "viande hachee"),
+        ("filet de dorade", "poisson blanc"),
+    ],
+)
+def test_detect_query_protein_resolves_cuts_and_species(written: str, term: str) -> None:
+    assert detect_query_protein(written) == term
+
+
+@pytest.mark.parametrize("written", ["bouillon de poulet", "fond de veau", "sauce de poisson"])
+def test_detect_query_protein_ignores_stocks_and_sauces(written: str) -> None:
+    assert detect_query_protein(written) is None
+
+
+@pytest.mark.parametrize("written", ["noix de coco", "fromage blanc", "huile de noix"])
+def test_detect_query_protein_matches_substitutes_only_as_whole_names(written: str) -> None:
+    assert detect_query_protein(written) is None
+
+
+def test_detect_query_protein_returns_none_for_an_ordinary_ingredient() -> None:
+    assert detect_query_protein("carottes") is None
+
+
+def test_query_protein_aliases_point_at_table_keys() -> None:
+    assert set(QUERY_PROTEIN_ALIASES.values()) <= set(SUBSTITUTION_TABLE)
+
+
+def test_query_protein_index_has_no_ambiguous_spelling() -> None:
+    """No two vocabulary entries or aliases may share a canonical form while
+    meaning different terms — one of them would silently become unreachable."""
+    terms: dict[str, set[str]] = {}
+    for term in QUERY_PROTEIN_VOCABULARY:
+        terms.setdefault(canonical_name(term), set()).add(term)
+    for alias, key in QUERY_PROTEIN_ALIASES.items():
+        terms.setdefault(canonical_name(alias), set()).add(key)
+
+    assert {form: found for form, found in terms.items() if len(found) > 1} == {}
+    assert _query_protein_index()[0]  # the index builds
+
+
+def test_split_query_ingredients_by_role_lists_each_protein_once() -> None:
+    proteins, rest = split_query_ingredients_by_role(["poulet", "blanc de poulet", "riz"])
+
+    assert proteins == ["poulet"]
+    assert rest == ["riz"]
+
+
+def test_split_query_ingredients_by_role_keeps_meat_as_the_only_protein() -> None:
+    # The egg of a tonkatsu batter is an ingredient of the dish, not the
+    # protein to replace.
+    proteins, rest = split_query_ingredients_by_role(["côtelettes de porc", "œuf", "farine"])
+
+    assert proteins == ["porc"]
+    assert rest == ["œuf", "farine"]
+
+
+def test_split_query_ingredients_by_role_without_meat_keeps_vegetarian_proteins() -> None:
+    proteins, rest = split_query_ingredients_by_role(["tofu", "riz"])
+
+    assert proteins == ["tofu"]
+    assert rest == ["riz"]
+
+
+def test_protein_similarity_falls_back_to_the_generic_substitute() -> None:
+    # Only "champignon" is scored for poulet; a pleurote borrows that score.
+    assert protein_similarity("poulet", "champignon pleurote") == pytest.approx(
+        protein_similarity("poulet", "champignon")
+    )
+
+
+def test_protein_similarity_prefers_a_specific_score_over_the_fallback() -> None:
+    # poisson blanc scores the pleurote itself (0.55) — that entry wins.
+    assert protein_similarity("poisson blanc", "champignon pleurote") == pytest.approx(0.55)
+
+
+def test_protein_similarity_treats_two_forms_of_one_substitute_as_identical() -> None:
+    assert protein_similarity("tofu ferme", "tofu emiette") == 1.0
+
+
+def test_protein_similarity_still_defaults_for_a_true_gap() -> None:
+    assert protein_similarity("boeuf", "coeur de palmier") == DEFAULT_PROTEIN_SIMILARITY
+
+
+def test_substitute_bases_stay_inside_the_recipe_vocabulary() -> None:
+    assert set(SUBSTITUTE_BASES) <= set(RECIPE_PROTEIN_VOCABULARY)
+    assert set(SUBSTITUTE_BASES.values()) <= set(RECIPE_PROTEIN_VOCABULARY)

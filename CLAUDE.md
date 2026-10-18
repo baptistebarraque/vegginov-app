@@ -116,7 +116,8 @@ veggie-app/
 │       ├── matching/                   # pure similarity logic, no FastAPI/DB deps
 │       │   ├── embeddings.py
 │       │   ├── similarity.py
-│       │   └── nutrition_view.py       # calorie-orientation soft ranking nudge
+│       │   ├── nutrition_view.py       # calorie-orientation soft ranking nudge
+│       │   └── ingredient_names.py     # canonical (spelling-insensitive) ingredient names
 │       ├── services/                   # business logic / orchestration
 │       │   ├── recipe_service.py
 │       │   ├── auth_service.py
