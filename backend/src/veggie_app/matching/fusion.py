@@ -9,9 +9,14 @@ pairs exists.
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from veggie_app.matching.ingredients_view import ingredients_view_score
+import numpy as np
+
+from veggie_app.matching.ingredients_view import (
+    prepare_query_ingredients,
+    prepared_ingredients_view_score,
+)
 from veggie_app.matching.nutrition_view import calorie_orientation_score
-from veggie_app.matching.similarity import cosine_similarity
+from veggie_app.matching.similarity import normalize_rows
 
 DEFAULT_TITLE_WEIGHT = 0.3
 
@@ -53,6 +58,18 @@ def apply_calorie_orientation(
     return (1 - calorie_weight) * similarity + calorie_weight * calorie_score
 
 
+def title_scores(
+    query_title_embedding: Sequence[float], candidates: Sequence[CandidateRecipe]
+) -> np.ndarray:
+    """Cosine similarity between the query title and every candidate title,
+    computed as one matrix product rather than one Python loop per pair."""
+    query = normalize_rows(np.asarray(query_title_embedding, dtype=np.float64).reshape(1, -1))[0]
+    titles = normalize_rows(
+        np.asarray([candidate.title_embedding for candidate in candidates], dtype=np.float64)
+    )
+    return titles @ query
+
+
 def rank_candidates(
     query_title_embedding: Sequence[float],
     query_ingredients: list[str],
@@ -63,15 +80,20 @@ def rank_candidates(
 ) -> list[tuple[int, float]]:
     """Returns (candidate_id, score) pairs, highest score first, truncated to
     top_k. When calorie_orientation is set, each recipe's similarity is nudged
-    by how well its per-portion calories match that orientation."""
+    by how well its per-portion calories match that orientation. The query's
+    title and ingredients are prepared once, then reused for every candidate."""
+    if not candidates:
+        return []
+
+    prepared_query = prepare_query_ingredients(query_ingredients)
     scored = [
         (
             candidate.id,
             apply_calorie_orientation(
                 fuse_scores(
-                    cosine_similarity(query_title_embedding, candidate.title_embedding),
-                    ingredients_view_score(
-                        query_ingredients, candidate.ingredient_names, candidate.protein_source
+                    float(title_score),
+                    prepared_ingredients_view_score(
+                        prepared_query, candidate.ingredient_names, candidate.protein_source
                     ),
                     title_weight,
                 ),
@@ -79,7 +101,9 @@ def rank_candidates(
                 calorie_orientation,
             ),
         )
-        for candidate in candidates
+        for candidate, title_score in zip(
+            candidates, title_scores(query_title_embedding, candidates), strict=True
+        )
     ]
     scored.sort(key=lambda pair: pair[1], reverse=True)
     return scored[:top_k]

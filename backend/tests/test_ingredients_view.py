@@ -1,19 +1,32 @@
 import pytest
 
 from veggie_app.matching import ingredients_view
-from veggie_app.matching.ingredients_view import ingredients_view_score
+from veggie_app.matching.ingredients_view import (
+    ingredients_view_score,
+    prepare_query_ingredients,
+    prepared_ingredients_view_score,
+)
 
 
 @pytest.fixture(autouse=True)
-def _stub_sub_scores(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Stub out the two underlying views so tests exercise only the
+def matrix_calls(monkeypatch: pytest.MonkeyPatch) -> list[list[str]]:
+    """Stubs out the two underlying views so tests exercise only the
     combination/weighting logic and the query/candidate role-splitting —
-    ingredient_set_similarity and protein_set_similarity each have their own
-    dedicated test files."""
-    monkeypatch.setattr(ingredients_view, "ingredient_set_similarity", lambda a, b: 0.8)
+    the ingredient matrices and protein_set_similarity each have their own
+    dedicated test files. The fake ingredient_matrix returns the names it was
+    given, and every call is recorded in the returned list."""
+    calls: list[list[str]] = []
+
+    def fake_ingredient_matrix(names: list[str]) -> list[str]:
+        calls.append(list(names))
+        return list(names)
+
+    monkeypatch.setattr(ingredients_view, "ingredient_matrix", fake_ingredient_matrix)
+    monkeypatch.setattr(ingredients_view, "matrix_set_similarity", lambda a, b: 0.8)
     monkeypatch.setattr(
         ingredients_view, "protein_set_similarity", lambda a, b: 0.6 if a and b else None
     )
+    return calls
 
 
 def test_combines_both_scores_with_default_weight() -> None:
@@ -49,43 +62,30 @@ def test_falls_back_to_rest_score_when_no_protein_detected_on_either_side() -> N
 
 
 def test_excludes_candidate_protein_source_from_rest_ingredients(
-    monkeypatch: pytest.MonkeyPatch,
+    matrix_calls: list[list[str]],
 ) -> None:
-    captured = {}
-
-    def fake_ingredient_set_similarity(a: list[str], b: list[str]) -> float:
-        captured["query_rest"] = a
-        captured["candidate_rest"] = b
-        return 0.8
-
-    monkeypatch.setattr(
-        ingredients_view, "ingredient_set_similarity", fake_ingredient_set_similarity
-    )
-
     ingredients_view_score(
         query_ingredients=["carotte"],
         candidate_ingredients=["tofu", "curry", "lait de coco"],
         candidate_protein_source="tofu",
     )
 
-    assert captured["candidate_rest"] == ["curry", "lait de coco"]
+    assert matrix_calls[-1] == ["curry", "lait de coco"]
 
 
-def test_excludes_query_protein_word_from_query_rest(monkeypatch: pytest.MonkeyPatch) -> None:
-    captured = {}
+def test_excludes_query_protein_word_from_query_rest(matrix_calls: list[list[str]]) -> None:
+    prepared = prepare_query_ingredients(["boeuf", "carotte", "oignon"])
 
-    def fake_ingredient_set_similarity(a: list[str], b: list[str]) -> float:
-        captured["query_rest"] = a
-        return 0.8
+    assert prepared.proteins == ["boeuf"]
+    assert matrix_calls == [["carotte", "oignon"]]
 
-    monkeypatch.setattr(
-        ingredients_view, "ingredient_set_similarity", fake_ingredient_set_similarity
-    )
 
-    ingredients_view_score(
-        query_ingredients=["boeuf", "carotte", "oignon"],
-        candidate_ingredients=["tofu"],
-        candidate_protein_source="tofu",
-    )
+def test_prepared_query_is_reused_across_candidates(matrix_calls: list[list[str]]) -> None:
+    prepared = prepare_query_ingredients(["boeuf", "carotte"])
 
-    assert captured["query_rest"] == ["carotte", "oignon"]
+    for candidate in (["curry"], ["lait de coco"], ["riz"]):
+        prepared_ingredients_view_score(prepared, candidate, None)
+
+    # One matrix for the query, then one per candidate — the query's rest
+    # ingredients are never resolved again.
+    assert matrix_calls == [["carotte"], ["curry"], ["lait de coco"], ["riz"]]

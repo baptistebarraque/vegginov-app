@@ -6,6 +6,7 @@ from veggie_app.matching.fusion import (
     apply_calorie_orientation,
     fuse_scores,
     rank_candidates,
+    title_scores,
 )
 
 
@@ -43,8 +44,9 @@ def test_apply_calorie_orientation_missing_calories_is_neutral() -> None:
 @pytest.fixture(autouse=True)
 def _stub_ingredients_view(monkeypatch: pytest.MonkeyPatch) -> None:
     """Isolates rank_candidates' orchestration (fetching + fusing + sorting)
-    from ingredients_view_score's own logic, which has its own test file."""
-    monkeypatch.setattr(fusion, "ingredients_view_score", lambda *args, **kwargs: 0.0)
+    from prepared_ingredients_view_score's own logic, which has its own test
+    file."""
+    monkeypatch.setattr(fusion, "prepared_ingredients_view_score", lambda *args, **kwargs: 0.0)
 
 
 def test_rank_candidates_orders_by_fused_score_descending() -> None:
@@ -77,7 +79,7 @@ def test_rank_candidates_respects_top_k() -> None:
 def test_rank_candidates_combines_title_and_ingredients_scores(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(fusion, "ingredients_view_score", lambda *args, **kwargs: 1.0)
+    monkeypatch.setattr(fusion, "prepared_ingredients_view_score", lambda *args, **kwargs: 1.0)
     candidates = [
         CandidateRecipe(id=1, title_embedding=[1.0, 0.0], ingredient_names=[], protein_source=None),
     ]
@@ -131,3 +133,46 @@ def test_rank_candidates_without_orientation_ignores_calories() -> None:
     ranked = rank_candidates(query_embedding, [], candidates)
 
     assert all(score == pytest.approx(ranked[0][1]) for _, score in ranked)
+
+
+def test_title_scores_returns_cosine_per_candidate_in_order() -> None:
+    candidates = [
+        CandidateRecipe(id=1, title_embedding=[0.0, 2.0], ingredient_names=[], protein_source=None),
+        CandidateRecipe(id=2, title_embedding=[3.0, 0.0], ingredient_names=[], protein_source=None),
+        CandidateRecipe(id=3, title_embedding=[1.0, 1.0], ingredient_names=[], protein_source=None),
+    ]
+
+    scores = title_scores([5.0, 0.0], candidates)
+
+    # Unnormalized inputs on purpose: the scores are cosines, not dot products.
+    assert list(scores) == pytest.approx([0.0, 1.0, 2**-0.5])
+
+
+def test_title_scores_zero_query_vector_scores_zero() -> None:
+    candidates = [
+        CandidateRecipe(id=1, title_embedding=[1.0, 0.0], ingredient_names=[], protein_source=None),
+    ]
+
+    assert list(title_scores([0.0, 0.0], candidates)) == [0.0]
+
+
+def test_rank_candidates_with_no_candidates_returns_empty() -> None:
+    assert rank_candidates([1.0, 0.0], ["oignon"], []) == []
+
+
+def test_rank_candidates_prepares_query_ingredients_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = []
+
+    def fake_prepare(query_ingredients: list[str]) -> str:
+        calls.append(query_ingredients)
+        return "prepared"
+
+    monkeypatch.setattr(fusion, "prepare_query_ingredients", fake_prepare)
+    candidates = [
+        CandidateRecipe(id=i, title_embedding=[1.0, 0.0], ingredient_names=[], protein_source=None)
+        for i in range(5)
+    ]
+
+    rank_candidates([1.0, 0.0], ["oignon"], candidates)
+
+    assert calls == [["oignon"]]

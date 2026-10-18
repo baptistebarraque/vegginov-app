@@ -115,3 +115,12 @@ def test_protein_set_similarity_picks_best_match_among_several_query_words() -> 
     score = protein_set_similarity(["carotte", "boeuf"], ["tofu"])
 
     assert score == pytest.approx(0.55)
+
+
+def test_protein_set_similarity_finds_optimal_assignment_between_several_on_each_side() -> None:
+    # Greedy would pair boeuf-seitan (0.90) then leave poulet-tofu (0.80);
+    # here that greedy pairing is also optimal (0.85 mean) and must beat the
+    # crossed pairing boeuf-tofu (0.55) + poulet-seitan (0.80) = 0.675 mean.
+    score = protein_set_similarity(["boeuf", "poulet"], ["tofu", "seitan"])
+
+    assert score == pytest.approx((0.90 + 0.80) / 2)

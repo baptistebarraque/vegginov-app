@@ -677,3 +677,52 @@ add-recipe page with a second link (rejected — the admin now has two real
 sections, and a form is a poor landing page for choosing between them);
 per-user `COUNT` subqueries in the list query (rejected — N+1 as the account
 count grows).
+
+---
+
+## Vectorized matching: numpy cosines + cached ingredient matrices
+
+Date: 2026-10-15
+Context: A `/suggestions` request took 2–3 s over the 160-recipe curated
+corpus (~68 s projected at 4000 recipes). Profiling put ~95% of that in
+`similarity.cosine_similarity`, which summed vector products element by
+element in Python (~6.6M interpreted operations per query) — called once per
+ingredient pair per candidate, and once per candidate title. FlavorGraph
+lookups were ~1%.
+Decision:
+- **numpy for every cosine.** `similarity.normalize_rows` scales vectors to
+  unit length once; after that a whole block of cosines is one matrix product
+  (BLAS) — all candidate titles against the query title in
+  `fusion.title_scores`, all ingredient pairs of a recipe in
+  `ingredient_similarity.matrix_set_similarity`. `cosine_similarity` keeps its
+  signature and semantics (zero vector -> 0.0, dimension mismatch raises).
+- **Ingredient vectors precomputed and cached in-process**, at two levels:
+  each name's normalized FlavorGraph vector (`_unit_vector`), and each
+  ingredient list's stacked matrix (`ingredient_matrix`, keyed by the tuple of
+  names). Both are `lru_cache`s, bounded (16384 names / 8192 lists — a few MB
+  for today's corpus, ~100 MB worst case), arrays marked read-only since they
+  are shared. Keying on the names means editing a recipe can never serve a
+  stale matrix, with no invalidation hook to forget.
+- **The query side is prepared once per request**, not once per candidate:
+  `ingredients_view.prepare_query_ingredients` splits proteins from the rest
+  and builds the rest matrix; `prepared_ingredients_view_score` reuses it.
+  The original `ingredients_view_score` / `ingredient_set_similarity` remain as
+  one-off wrappers.
+- **Single-protein shortcut**: `protein_set_similarity` returns the best pair
+  directly when one side has a single protein (always true for a candidate,
+  which has one `protein_source`), skipping the Hungarian matrix setup that
+  otherwise cost more than the ingredient view itself.
+- **Pure refactor — scores unchanged.** Verified by diffing every score of 6
+  queries x 160 recipes against the previous implementation: max difference
+  1e-7 (float32 rounding), identical ordering. Result: ~15–25 ms per query at
+  160 recipes, ~0.4–0.5 s at 4000 (measured on the dev machine, matching only —
+  excludes the DB fetch and the query-title embedding).
+Alternatives considered: storing ingredient matrices in Postgres (rejected —
+needs a migration and a re-backfill whenever `SOURCE_TO_FLAVORGRAPH` changes,
+for vectors that rebuild in milliseconds from a local file); a pgvector/ANN
+shortlist before the fine ranking (deferred — not needed at this corpus size,
+and it would change which recipes get scored, unlike this refactor); a faster
+third-party library (faiss etc.) — unnecessary, numpy/scipy were already
+direct dependencies and the remaining cost is per-candidate Python overhead
+(~100 µs each), not arithmetic.
+

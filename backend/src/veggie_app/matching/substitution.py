@@ -165,6 +165,16 @@ def protein_set_similarity(
     than penalize a recipe for lacking one."""
     if not proteins_a or not proteins_b:
         return None
+    if len(proteins_a) == 1 or len(proteins_b) == 1:
+        # Only one pair can be matched, so the Hungarian result is simply the
+        # best pair. This is the hot path — a candidate recipe always has a
+        # single protein_source — and skipping the matrix setup matters when
+        # it runs once per recipe on every request.
+        return max(
+            protein_similarity(protein_a, protein_b, table)
+            for protein_a in proteins_a
+            for protein_b in proteins_b
+        )
 
     cost_matrix = np.zeros((len(proteins_a), len(proteins_b)))
     for i, protein_a in enumerate(proteins_a):
