@@ -22,7 +22,8 @@ def matrix_calls(monkeypatch: pytest.MonkeyPatch) -> list[list[str]]:
         return list(names)
 
     monkeypatch.setattr(ingredients_view, "ingredient_matrix", fake_ingredient_matrix)
-    monkeypatch.setattr(ingredients_view, "matrix_set_similarity", lambda a, b: 0.8)
+    monkeypatch.setattr(ingredients_view, "ingredient_weight_vector", lambda names, weights: None)
+    monkeypatch.setattr(ingredients_view, "matrix_set_similarity", lambda *args: 0.8)
     monkeypatch.setattr(
         ingredients_view, "protein_set_similarity", lambda a, b: 0.6 if a and b else None
     )
@@ -102,3 +103,21 @@ def test_excludes_candidate_protein_source_whatever_its_spelling(
     )
 
     assert matrix_calls[-1] == ["poireau"]
+
+
+def test_prepared_query_carries_the_weights_of_its_rest_ingredients(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = {}
+
+    def fake_weight_vector(names: list[str], weights: object) -> str:
+        captured["names"], captured["weights"] = list(names), weights
+        return "weights-vector"
+
+    monkeypatch.setattr(ingredients_view, "ingredient_weight_vector", fake_weight_vector)
+    weights = object()
+
+    prepared = prepare_query_ingredients(["boeuf", "carotte"], weights)
+
+    assert captured == {"names": ["carotte"], "weights": weights}
+    assert prepared.rest_weights == "weights-vector"

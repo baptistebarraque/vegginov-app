@@ -711,6 +711,14 @@ def _lookup(ingredient: str, canonical_mapping: dict[str, str]) -> str | None:
     return None
 
 
+@lru_cache(maxsize=65536)
+def get_concept(ingredient: str) -> str | None:
+    """The FlavorGraph concept (English name) `ingredient` resolves to, or None —
+    the identity two differently-worded ingredients share ("oignon émincé" and
+    "oignons" are both "onion"). Used to count how common an ingredient is."""
+    return _lookup(ingredient, _canonical_source_to_flavorgraph())
+
+
 def get_vector(
     ingredient: str, mapping: dict[str, str] = SOURCE_TO_FLAVORGRAPH
 ) -> np.ndarray | None:

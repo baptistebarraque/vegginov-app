@@ -23,7 +23,13 @@ from dataclasses import dataclass
 import numpy as np
 
 from veggie_app.matching.ingredient_names import canonical_name
-from veggie_app.matching.ingredient_similarity import ingredient_matrix, matrix_set_similarity
+from veggie_app.matching.ingredient_similarity import (
+    UNIFORM_WEIGHTS,
+    IngredientWeights,
+    ingredient_matrix,
+    ingredient_weight_vector,
+    matrix_set_similarity,
+)
 from veggie_app.matching.substitution import (
     protein_set_similarity,
     split_query_ingredients_by_role,
@@ -34,15 +40,23 @@ DEFAULT_PROTEIN_WEIGHT = 0.4
 
 @dataclass(frozen=True)
 class PreparedQueryIngredients:
-    """A query's ingredients, split by role and resolved to vectors once."""
+    """A query's ingredients, split by role and resolved to vectors (and
+    weights, aligned with the matrix rows) once."""
 
     proteins: list[str]
     rest_matrix: np.ndarray
+    rest_weights: np.ndarray
 
 
-def prepare_query_ingredients(query_ingredients: list[str]) -> PreparedQueryIngredients:
+def prepare_query_ingredients(
+    query_ingredients: list[str], weights: IngredientWeights = UNIFORM_WEIGHTS
+) -> PreparedQueryIngredients:
     proteins, rest = split_query_ingredients_by_role(query_ingredients)
-    return PreparedQueryIngredients(proteins=proteins, rest_matrix=ingredient_matrix(rest))
+    return PreparedQueryIngredients(
+        proteins=proteins,
+        rest_matrix=ingredient_matrix(rest),
+        rest_weights=ingredient_weight_vector(rest, weights),
+    )
 
 
 def _exclude_protein_source(ingredients: list[str], protein_source: str | None) -> list[str]:
@@ -68,7 +82,9 @@ def prepared_ingredients_view_score(
     candidate_rest = _exclude_protein_source(candidate_ingredients, candidate_protein_source)
 
     protein_score = protein_set_similarity(query.proteins, candidate_proteins)
-    rest_score = matrix_set_similarity(query.rest_matrix, ingredient_matrix(candidate_rest))
+    rest_score = matrix_set_similarity(
+        query.rest_matrix, ingredient_matrix(candidate_rest), query.rest_weights
+    )
 
     if protein_score is None:
         return rest_score

@@ -18,15 +18,24 @@ list is stacked into a matrix once (ingredient_matrix). Scoring is split in
 two so a caller ranking many recipes against one query builds the query's
 matrix once and reuses it for every candidate (matrix_set_similarity). See
 docs/ARCHITECTURE.md "Vectorized matching".
+
+The score measures how well a candidate *covers the query*: each query
+ingredient counts in proportion to its weight (IngredientWeights — rare
+ingredients count more than garlic, salt or olive oil, which nearly every
+recipe shares), and a query ingredient the candidate can't match counts as 0
+rather than being left out. See docs/ARCHITECTURE.md "Ingredient weighting".
 """
 
-from collections.abc import Sequence
+import math
+from collections import Counter
+from collections.abc import Iterable, Sequence
+from dataclasses import dataclass
 from functools import lru_cache
 
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
-from veggie_app.matching.flavorgraph import get_vector
+from veggie_app.matching.flavorgraph import get_concept, get_vector
 from veggie_app.matching.similarity import normalize_rows
 
 # FlavorGraph's vector size, used for the (0, dim) matrix of a list with no
@@ -82,19 +91,88 @@ def clear_vector_caches() -> None:
     _stacked_unit_vectors.cache_clear()
 
 
-def matrix_set_similarity(matrix_a: np.ndarray, matrix_b: np.ndarray) -> float:
-    """Optimal one-to-one matching (Hungarian algorithm) between two
-    ingredient matrices from ingredient_matrix, averaged over matched pairs.
-    Rows are unit vectors, so one matrix product gives every pairwise cosine.
-    Returns 0.0 if either side has no row — nothing left to compare."""
-    if len(matrix_a) == 0 or len(matrix_b) == 0:
-        return 0.0
+@dataclass(frozen=True)
+class IngredientWeights:
+    """How informative each ingredient is, from how many recipes of the corpus
+    contain it: smoothed inverse document frequency, log((1 + N) / (1 + df)) + 1,
+    counted per FlavorGraph concept so "oignon émincé" and "oignons" are one
+    ingredient. Garlic (in half the recipes) weighs ~1.7, an ingredient in a
+    single recipe ~5.7.
 
-    similarities = matrix_a @ matrix_b.T
-    row_indices, col_indices = linear_sum_assignment(similarities, maximize=True)
-    # sum / count rather than .mean(): same value, a fraction of the call
-    # overhead, which adds up at one call per candidate recipe.
-    return float(similarities[row_indices, col_indices].sum()) / len(row_indices)
+    An ingredient no recipe contains gets `unknown_weight` (the median weight
+    of the corpus) instead of the maximum the formula would give: a frequency
+    of zero is no evidence of how distinctive it is — it's typically another
+    wording of something the corpus has ("bière brune" where recipes say
+    "bière") — and since no candidate can match it exactly, a top weight would
+    only dilute the ingredients that can."""
+
+    document_frequencies: dict[str, int]
+    recipe_count: int
+    unknown_weight: float = 1.0
+
+    def weight(self, ingredient: str) -> float:
+        concept = get_concept(ingredient)
+        frequency = self.document_frequencies.get(concept) if concept else None
+        if frequency is None:
+            return self.unknown_weight
+        return _idf(frequency, self.recipe_count)
+
+
+def _idf(frequency: int, recipe_count: int) -> float:
+    return math.log((1 + recipe_count) / (1 + frequency)) + 1
+
+
+UNIFORM_WEIGHTS = IngredientWeights(document_frequencies={}, recipe_count=0)
+
+
+def compute_ingredient_weights(ingredient_lists: Iterable[Sequence[str]]) -> IngredientWeights:
+    """Counts, for each FlavorGraph concept, the recipes containing it — once
+    per recipe, however many times it is listed."""
+    frequencies: Counter[str] = Counter()
+    recipe_count = 0
+    for ingredients in ingredient_lists:
+        recipe_count += 1
+        frequencies.update(
+            {concept for concept in (get_concept(name) for name in ingredients) if concept}
+        )
+    corpus_weights = [_idf(frequency, recipe_count) for frequency in frequencies.values()]
+    return IngredientWeights(
+        document_frequencies=dict(frequencies),
+        recipe_count=recipe_count,
+        unknown_weight=float(np.median(corpus_weights)) if corpus_weights else 1.0,
+    )
+
+
+def ingredient_weight_vector(ingredients: Sequence[str], weights: IngredientWeights) -> np.ndarray:
+    """The weight of each row of ingredient_matrix(ingredients), in the same
+    order (unresolvable ingredients are dropped from both)."""
+    return np.array(
+        [weights.weight(name) for name in ingredients if _unit_vector(name) is not None],
+        dtype=np.float64,
+    )
+
+
+def matrix_set_similarity(
+    query_matrix: np.ndarray,
+    candidate_matrix: np.ndarray,
+    query_weights: np.ndarray | None = None,
+) -> float:
+    """How well the candidate's ingredients cover the query's, in [0, 1]:
+    optimal one-to-one matching (Hungarian algorithm) that maximizes the
+    weighted similarity, divided by the total weight of *all* query
+    ingredients — so an unmatched query ingredient (the candidate has fewer
+    ingredients) counts as 0 instead of being ignored. Rows are unit vectors,
+    so one matrix product gives every pairwise cosine; negative cosines count
+    as 0. Without weights every query ingredient counts the same. Returns 0.0
+    if either side has no row — nothing left to compare."""
+    if len(query_matrix) == 0 or len(candidate_matrix) == 0:
+        return 0.0
+    if query_weights is None:
+        query_weights = np.ones(len(query_matrix))
+
+    weighted = np.clip(query_matrix @ candidate_matrix.T, 0.0, None) * query_weights[:, None]
+    row_indices, col_indices = linear_sum_assignment(weighted, maximize=True)
+    return float(weighted[row_indices, col_indices].sum() / query_weights.sum())
 
 
 def ingredient_set_similarity(ingredients_a: list[str], ingredients_b: list[str]) -> float:

@@ -163,7 +163,7 @@ def test_rank_candidates_with_no_candidates_returns_empty() -> None:
 def test_rank_candidates_prepares_query_ingredients_once(monkeypatch: pytest.MonkeyPatch) -> None:
     calls = []
 
-    def fake_prepare(query_ingredients: list[str]) -> str:
+    def fake_prepare(query_ingredients: list[str], weights: object) -> str:
         calls.append(query_ingredients)
         return "prepared"
 
@@ -176,3 +176,20 @@ def test_rank_candidates_prepares_query_ingredients_once(monkeypatch: pytest.Mon
     rank_candidates([1.0, 0.0], ["oignon"], candidates)
 
     assert calls == [["oignon"]]
+
+
+def test_rank_candidates_uses_the_ingredient_weights_it_is_given(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    received = []
+    monkeypatch.setattr(
+        fusion, "prepare_query_ingredients", lambda names, weights: received.append(weights)
+    )
+    weights = object()
+    candidates = [
+        CandidateRecipe(id=1, title_embedding=[1.0, 0.0], ingredient_names=[], protein_source=None)
+    ]
+
+    rank_candidates([1.0, 0.0], ["oignon"], candidates, ingredient_weights=weights)
+
+    assert received == [weights]

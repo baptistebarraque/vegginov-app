@@ -827,3 +827,37 @@ symmetrically); detecting vegetarian substitutes inside names (rejected —
 misfires on compounds); keeping every detected protein in a meat query
 (rejected — measured regression, see "meat first").
 
+---
+
+## Ingredient weighting: rarity-weighted coverage of the query
+
+Date: 2026-10-17
+Context: The Hungarian ingredient score averaged cosine over *matched pairs*
+only, every ingredient counting the same. Measured on the corpus: two distinct
+FlavorGraph concepts have a median cosine of 0.13, so the score was carried
+almost entirely by exact repeats — and the most repeated ingredients are the
+basics (garlic in 110 of 218 recipes, onion 97, olive oil 93, salt 81). Any two
+recipes sharing them looked alike, and a candidate matching 2 of 6 query
+ingredients could still score 1.0.
+Decision:
+- **Weights**: smoothed IDF per FlavorGraph concept,
+  `log((1 + N) / (1 + df)) + 1` (garlic ~1.7, a one-recipe ingredient ~5.7),
+  computed in `recipe_service.get_suggestions` over the *whole* table before
+  the allergen/price filters, so weights don't vary per user.
+  `rank_candidates` computes them from its candidates when not given one.
+- **Unknown concepts get the median weight**, not the maximum: a concept no
+  recipe has ("bière brune" -> dark_beer while recipes say "bière") is no
+  evidence of distinctiveness, can never match exactly, and at full weight only
+  diluted the matchable ingredients (carbonade: rank 6 -> 17 before this fix).
+- **Coverage**: the assignment maximizes weighted similarity, and the score is
+  divided by the total weight of *all* resolvable query ingredients — an
+  unmatched query ingredient counts 0 instead of being ignored. Negative
+  cosines count as 0. Asymmetric on purpose: extra candidate ingredients are
+  not penalized.
+Result vs the previous run: MRR 0.893 -> 0.920, ideal@4 0.896 -> 0.917,
+nDCG@12 0.663 -> 0.672, recall@12 0.531 -> 0.520. ~200 ms per query at 4000
+recipes including the weight computation.
+Alternatives considered: a fixed stop-list of basics (rejected — arbitrary,
+and IDF derives it from the corpus); rescaling cosines against a "floor"
+(rejected after measuring — unrelated concepts already score ~0.1).
+

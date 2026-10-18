@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from veggie_app.matching.embeddings import embed_text
 from veggie_app.matching.fusion import CandidateRecipe, rank_candidates
+from veggie_app.matching.ingredient_similarity import compute_ingredient_weights
 from veggie_app.matching.substitution import RECIPE_PROTEIN_VOCABULARY
 from veggie_app.models.recipe import IngredientEntry, Recipe
 from veggie_app.schemas.recipe import IngredientEntrySchema, RecipeSuggestion
@@ -207,6 +208,11 @@ def get_suggestions(
     query_title_embedding = embed_text(title)
 
     recipes = db.execute(select(Recipe)).scalars().all()
+    # Weighted on the whole corpus, before the filters below, so how much an
+    # ingredient counts doesn't depend on the caller's allergens or budget.
+    ingredient_weights = compute_ingredient_weights(
+        [ingredient["name"] for ingredient in recipe.ingredients] for recipe in recipes
+    )
     if excluded_allergens:
         # Hard exclusion, applied before ranking — a declared allergen never
         # just soft-ranks a recipe lower (docs/ROADMAP.md Phase 4 preferences).
@@ -232,6 +238,7 @@ def get_suggestions(
         [build_candidate(recipe) for recipe in recipes],
         top_k=SUGGESTION_COUNT,
         calorie_orientation=calorie_orientation,
+        ingredient_weights=ingredient_weights,
     )
 
     recipes_by_id = {recipe.id: recipe for recipe in recipes}

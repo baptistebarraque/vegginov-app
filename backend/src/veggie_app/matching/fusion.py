@@ -11,6 +11,10 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from veggie_app.matching.ingredient_similarity import (
+    IngredientWeights,
+    compute_ingredient_weights,
+)
 from veggie_app.matching.ingredients_view import (
     prepare_query_ingredients,
     prepared_ingredients_view_score,
@@ -77,15 +81,22 @@ def rank_candidates(
     top_k: int = 4,
     title_weight: float = DEFAULT_TITLE_WEIGHT,
     calorie_orientation: str | None = None,
+    ingredient_weights: IngredientWeights | None = None,
 ) -> list[tuple[int, float]]:
     """Returns (candidate_id, score) pairs, highest score first, truncated to
     top_k. When calorie_orientation is set, each recipe's similarity is nudged
     by how well its per-portion calories match that orientation. The query's
-    title and ingredients are prepared once, then reused for every candidate."""
+    title and ingredients are prepared once, then reused for every candidate.
+    ingredient_weights should come from the whole corpus; when omitted they are
+    computed from `candidates`."""
     if not candidates:
         return []
 
-    prepared_query = prepare_query_ingredients(query_ingredients)
+    if ingredient_weights is None:
+        ingredient_weights = compute_ingredient_weights(
+            candidate.ingredient_names for candidate in candidates
+        )
+    prepared_query = prepare_query_ingredients(query_ingredients, ingredient_weights)
     scored = [
         (
             candidate.id,

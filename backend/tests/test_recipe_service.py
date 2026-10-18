@@ -497,3 +497,41 @@ def test_build_candidate_exposes_what_matching_needs() -> None:
     assert candidate.ingredient_names == ["lentilles corail", "lait de coco"]
     assert candidate.protein_source == "lentilles corail"
     assert candidate.calories_per_portion == 450.0
+
+
+def test_get_suggestions_weighs_ingredients_on_the_whole_corpus(
+    db_session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Ingredient weights must not depend on the caller's filters: a recipe
+    excluded by an allergen still counts when measuring how common an
+    ingredient is."""
+    captured = {}
+    real = recipe_service.compute_ingredient_weights
+
+    def spy(ingredient_lists):  # noqa: ANN001, ANN202 — passthrough spy
+        lists = [list(names) for names in ingredient_lists]
+        captured["lists"] = lists
+        return real(lists)
+
+    monkeypatch.setattr(recipe_service, "compute_ingredient_weights", spy)
+    kept = Recipe(
+        title="Gardée",
+        ingredients=[{"name": "riz", "quantity": None}],
+        allergens=[],
+        embedding=_unit_vector(0),
+    )
+    excluded = Recipe(
+        title="Exclue",
+        ingredients=[{"name": "arachide", "quantity": None}],
+        allergens=["arachide"],
+        embedding=_unit_vector(1),
+    )
+    db_session.add_all([kept, excluded])
+    db_session.flush()
+
+    suggestions = recipe_service.get_suggestions(
+        db_session, "query", [], excluded_allergens=["arachide"]
+    )
+
+    assert [s.title for s in suggestions] == ["Gardée"]
+    assert ["arachide"] in captured["lists"]
