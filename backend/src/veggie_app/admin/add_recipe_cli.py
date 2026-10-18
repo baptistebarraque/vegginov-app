@@ -12,6 +12,7 @@ from veggie_app.models.recipe import IngredientEntry
 from veggie_app.services import image_service, recipe_service
 from veggie_app.services.image_service import InvalidImageError
 from veggie_app.services.recipe_service import (
+    DishStructureError,
     IngredientQuantityError,
     PriceTierError,
     ProteinSourceError,
@@ -147,6 +148,21 @@ def _prompt_protein_source() -> str | None:
         return raw
 
 
+def _prompt_dish_structure() -> tuple[list[str], str | None]:
+    dish_type_options, cuisine_options = recipe_service.list_dish_structure_options()
+    logger.info("Types de plat : %s", ", ".join(dish_type_options))
+    logger.info("Cuisines : %s", ", ".join(cuisine_options))
+    while True:
+        dish_types = _prompt_list("Types de plat (optionnel, séparés par des virgules) : ")
+        cuisine = input("Cuisine (optionnel, l'une des valeurs ci-dessus) : ").strip() or None
+        try:
+            recipe_service.validate_dish_structure(dish_types, cuisine)
+        except DishStructureError as exc:
+            logger.warning("%s", exc)
+            continue
+        return dish_types, cuisine
+
+
 def _prompt_instructions() -> list[str]:
     logger.info("Étapes de préparation (optionnel, une étape par ligne, ligne vide pour finir) :")
     steps = []
@@ -181,6 +197,7 @@ def main() -> None:
     protein_grams = _prompt_protein_grams()
     calories_per_portion = _prompt_calories()
     price_tier = _prompt_price_tier()
+    dish_types, cuisine = _prompt_dish_structure()
     instructions = _prompt_instructions()
     image_filename = _prompt_image_filename()
 
@@ -200,6 +217,8 @@ def main() -> None:
                 price_tier=price_tier,
                 instructions=instructions,
                 image_filename=image_filename,
+                dish_types=dish_types,
+                cuisine=cuisine,
             )
         except IngredientQuantityError as exc:
             logger.warning("%s", exc)

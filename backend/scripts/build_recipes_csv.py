@@ -37,8 +37,8 @@ from pathlib import Path
 
 from veggie_app.matching.flavorgraph import get_vector
 from veggie_app.matching.substitution import RECIPE_PROTEIN_VOCABULARY
-from veggie_app.services import recipe_import_service
-from veggie_app.services.recipe_service import MAX_PRICE_TIER
+from veggie_app.services import recipe_import_service, recipe_service
+from veggie_app.services.recipe_service import MAX_PRICE_TIER, DishStructureError
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -208,6 +208,14 @@ def validate(recipes: list[dict]) -> tuple[list[str], list[str]]:
         if recipe.get("servings") != 4:
             warnings.append(f"{tag} : servings vaut {recipe.get('servings')!r}, attendu 4")
 
+        dish_types, cuisine = recipe.get("dish_types", []), recipe.get("cuisine")
+        try:
+            recipe_service.validate_dish_structure(dish_types, cuisine)
+        except DishStructureError as exc:
+            errors.append(f"{tag} : {exc}")
+        if not dish_types or not cuisine:
+            warnings.append(f"{tag} : dish_types/cuisine manquants (vue structure inactive)")
+
         for allergen in recipe.get("allergens", []):
             if allergen not in ALLOWED_ALLERGENS:
                 errors.append(f"{tag} : allergène {allergen!r} hors de la liste autorisée")
@@ -239,6 +247,8 @@ def to_rows(recipes: list[dict]) -> list[dict]:
                 "protein_grams": recipe.get("protein_grams", ""),
                 "calories_per_portion": recipe.get("calories_per_portion", ""),
                 "price_tier": recipe.get("price_tier", ""),
+                "dish_types": joiner.join(recipe.get("dish_types", [])),
+                "cuisine": recipe.get("cuisine") or "",
                 "instructions": joiner.join(recipe.get("instructions", [])),
                 "image_query": recipe.get("image_query", ""),
                 "protein_source_raw": recipe.get("protein_source_raw", ""),

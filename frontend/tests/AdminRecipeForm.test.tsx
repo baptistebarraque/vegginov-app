@@ -49,6 +49,8 @@ describe("AdminRecipeForm", () => {
         proteinGrams: 18.5,
         caloriesPerPortion: 420,
         priceTier: 2,
+        dishTypes: [],
+        cuisine: null,
         instructions: ["Faire revenir les oignons", "Ajouter les lentilles et le curry"],
         image: null,
       },
@@ -90,6 +92,8 @@ describe("AdminRecipeForm", () => {
         proteinGrams: null,
         caloriesPerPortion: null,
         priceTier: null,
+        dishTypes: [],
+        cuisine: null,
         instructions: [],
         image: null,
       },
@@ -125,6 +129,54 @@ describe("AdminRecipeForm", () => {
     expect(screen.getByText(/quantité obligatoire/i)).toBeInTheDocument();
   });
 
+  it("submits the checked dish types and the selected cuisine", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(
+      <AdminRecipeForm
+        onSubmit={onSubmit}
+        isLoading={false}
+        dishStructureOptions={{ dish_types: ["gratin", "pâtes", "soupe"], cuisines: ["italienne"] }}
+      />,
+    );
+
+    await user.type(screen.getByLabelText(/nom de la recette/i), "Lasagnes");
+    await user.type(screen.getByLabelText(/nom de l'ingrédient 1/i), "lentilles");
+    await user.click(screen.getByRole("checkbox", { name: "gratin" }));
+    await user.click(screen.getByRole("checkbox", { name: "pâtes" }));
+    await user.selectOptions(screen.getByLabelText(/cuisine/i), "italienne");
+    await user.click(screen.getByRole("button", { name: /ajouter la recette/i }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ dishTypes: ["gratin", "pâtes"], cuisine: "italienne" }),
+      false,
+    );
+  });
+
+  it("keeps a recipe's tags when the dish structure options are unavailable", async () => {
+    // An edit must never wipe the tags just because the vocabulary failed to
+    // load: they are still shown, checked, and submitted back.
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(
+      <AdminRecipeForm
+        onSubmit={onSubmit}
+        isLoading={false}
+        initialValues={editInitialValues}
+        submitLabel="Enregistrer"
+      />,
+    );
+
+    expect(screen.getByRole("checkbox", { name: "curry" })).toBeChecked();
+    expect(screen.getByLabelText(/cuisine/i)).toHaveValue("indienne");
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ dishTypes: ["curry"], cuisine: "indienne" }),
+      false,
+    );
+  });
+
   it("disables the submit button while loading", () => {
     render(<AdminRecipeForm onSubmit={vi.fn()} isLoading={true} />);
     expect(screen.getByRole("button", { name: "Ajout..." })).toBeDisabled();
@@ -140,6 +192,8 @@ describe("AdminRecipeForm", () => {
     proteinGrams: 18.5,
     caloriesPerPortion: 420,
     priceTier: 2,
+    dishTypes: ["curry"],
+    cuisine: "indienne",
     instructions: ["Étape 1"],
     image: null,
   };

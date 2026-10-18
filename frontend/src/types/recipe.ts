@@ -41,6 +41,15 @@ export interface RecipeDetail {
   protein_density: number | null; // grams of protein per 100 kcal, computed by the backend
   instructions: string[];
   image_url: string | null;
+  dish_types: string[];
+  cuisine: string | null;
+}
+
+/** Closed vocabularies a recipe's dish structure is tagged with
+ * (backend matching/dish_structure.py). */
+export interface DishStructureOptions {
+  dish_types: string[];
+  cuisines: string[];
 }
 
 export interface RecipeListItem {
@@ -59,6 +68,8 @@ export interface RecipeFormValues {
   proteinGrams: number | null;
   caloriesPerPortion: number | null;
   priceTier: number | null;
+  dishTypes: string[];
+  cuisine: string | null;
   instructions: string[];
   image: File | null;
 }

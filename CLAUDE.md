@@ -117,7 +117,9 @@ veggie-app/
 │       │   ├── embeddings.py
 │       │   ├── similarity.py
 │       │   ├── nutrition_view.py       # calorie-orientation soft ranking nudge
-│       │   └── ingredient_names.py     # canonical (spelling-insensitive) ingredient names
+│       │   ├── ingredient_names.py     # canonical (spelling-insensitive) ingredient names
+│       │   ├── dish_structure.py       # dish type + cuisine view (vocabularies, scoring)
+│       │   └── dish_lexicon.py         # dish names -> dish types/cuisine, for queries
 │       ├── services/                   # business logic / orchestration
 │       │   ├── recipe_service.py
 │       │   ├── auth_service.py
@@ -192,6 +194,8 @@ uv run python -m veggie_app.admin.create_admin_cli
 uv run python -m scripts.evaluate_similarity -v
 uv run python -m scripts.evaluate_similarity --save data/similarity_eval/runs/before.json
 uv run python -m scripts.evaluate_similarity --compare data/similarity_eval/runs/before.json
+# Apply curated dish-structure tags (data/recipe_tags.json) to the recipes table
+uv run python -m scripts.apply_recipe_tags --dry-run
  
 # Frontend
 cd frontend

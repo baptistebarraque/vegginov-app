@@ -861,3 +861,49 @@ Alternatives considered: a fixed stop-list of basics (rejected — arbitrary,
 and IDF derives it from the corpus); rescaling cosines against a "floor"
 (rejected after measuring — unrelated concepts already score ~0.1).
 
+---
+
+## Dish structure view: curated recipe tags, lexicon-inferred query tags
+
+Date: 2026-10-17
+Context: Title embeddings match wording ("Lasagnes à la bolognaise" scored a
+mafé above the soy bolognaise) and the protein view rewards the best texture
+substitute (seitan for any beef) over the same dish. Neither knows that a
+carbonade is a stew from northern Europe.
+Decision:
+- **Two closed vocabularies** in `matching/dish_structure.py`: `DISH_TYPES`
+  (21 forms — ragoût, curry, soupe, gratin, pâtes, nouilles, riz, tarte,
+  sandwich, tacos, sauté, rôti-grillé, pané-frit...; a recipe can have several)
+  and `CUISINES` (17, each in a region). Stored on `recipes.dish_types` (ARRAY,
+  default `{}`) and `recipes.cuisine` (nullable), migration `8c41d2f7a9b3`;
+  validated like `protein_source` on every entry point (admin form, CSV
+  import/export, CLI, batch builder).
+- **Score**: dish types match when they share one (1/0), cuisine 1 / same
+  region 0.5 / 0, combined 60/40; one axis alone when only it is comparable.
+  Blended into the similarity with `STRUCTURE_WEIGHT` 0.25, *only* when both
+  sides have tags — unknown dishes and untagged recipes rank exactly as before.
+- **Query tags are inferred** from the title with `matching/dish_lexicon.py`
+  (~370 entries: common dishes per cuisine, generic dish words, cuisine
+  adjectives with derived feminines), longest phrase first. Phrases name only
+  what they're sure of ("curry" alone has no cuisine). Written for common
+  searches, not for the judged set.
+- **Recipe tags are curated**: `data/recipe_tags.json` (lexicon pre-fill of
+  the 218 dev-DB recipes, then each reviewed — 71 corrected), applied by
+  `scripts/apply_recipe_tags.py`, which writes only the two columns.
+- **The admin form edits them** (checkboxes + select). Required, not
+  optional: saving a recipe rewrites every field, so a form unaware of the tags
+  would erase them on each edit. The form keeps showing and re-submitting a
+  recipe's tags even when the vocabulary fails to load.
+Result vs the weighting run: nDCG@12 0.672 -> 0.839, recall@12 0.520 ->
+0.777, MRR 0.920 -> 0.982, ideal@4 0.917 -> 0.979; title-only queries nDCG
+0.39 -> 0.76. Weight sweep 0.15-0.5 all give nDCG 0.81-0.84 (a plateau, not a
+tuned peak). One regression: porc au caramel (a braise by the lexicon, while
+its judged answers are glazed sautés). Caveat: grade 2 in the judged set means
+"same dish form", which this view encodes almost directly, and both were
+written by the same hand — part of the gain is that agreement.
+Alternatives considered: inferring recipe tags from titles at query time like
+the query side (rejected — titles often don't name the form, "Curry de
+pois chiches" has no cuisine; curation is cheap at this size); embedding the
+query against tag labels (rejected — the same title model this view exists to
+complement); a single free-text "category" field (rejected — exact-match
+scoring needs closed vocabularies).

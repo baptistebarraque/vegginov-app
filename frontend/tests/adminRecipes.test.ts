@@ -21,6 +21,8 @@ const baseValues: RecipeFormValues = {
   proteinGrams: null,
   caloriesPerPortion: null,
   priceTier: null,
+  dishTypes: [],
+  cuisine: null,
   instructions: [],
   image: null,
 };
@@ -65,8 +67,21 @@ describe("createRecipe", () => {
     expect(formData.get("protein_grams")).toBeNull();
     expect(formData.get("calories_per_portion")).toBeNull();
     expect(formData.get("price_tier")).toBeNull();
+    expect(formData.getAll("dish_types")).toEqual([]);
+    expect(formData.get("cuisine")).toBeNull();
     expect(formData.get("image")).toBeNull();
     expect(result).toEqual(mockResponse);
+  });
+
+  it("appends every dish type and the cuisine when provided", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await createRecipe({ ...baseValues, dishTypes: ["gratin", "pâtes"], cuisine: "italienne" });
+
+    const formData = (fetchMock.mock.calls[0] as [string, RequestInit])[1].body as FormData;
+    expect(formData.getAll("dish_types")).toEqual(["gratin", "pâtes"]);
+    expect(formData.get("cuisine")).toBe("italienne");
   });
 
   it("appends calories_per_portion and price_tier when provided", async () => {

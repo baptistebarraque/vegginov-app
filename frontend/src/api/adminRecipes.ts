@@ -1,5 +1,6 @@
 import type {
   CsvImportResult,
+  DishStructureOptions,
   RecipeDetail,
   RecipeFormValues,
   RecipeListItem,
@@ -34,6 +35,12 @@ function buildRecipeFormData(values: RecipeFormValues): FormData {
   }
   if (values.priceTier !== null) {
     formData.append("price_tier", String(values.priceTier));
+  }
+  // Always sent, like allergens: saving a recipe rewrites every field, so
+  // an absent list would erase the recipe's tags.
+  for (const dishType of values.dishTypes) formData.append("dish_types", dishType);
+  if (values.cuisine !== null) {
+    formData.append("cuisine", values.cuisine);
   }
   if (values.image !== null) {
     formData.append("image", values.image);
@@ -81,6 +88,18 @@ export async function getProteinSourceOptions(): Promise<string[]> {
   }
 
   return response.json() as Promise<string[]>;
+}
+
+export async function getDishStructureOptions(): Promise<DishStructureOptions> {
+  const response = await fetch(`${API_BASE_URL}/admin/dish-structure-options`, {
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    throw new Error(`List dish structure options request failed: ${response.status}`);
+  }
+
+  return response.json() as Promise<DishStructureOptions>;
 }
 
 export async function listRecipes(): Promise<RecipeListItem[]> {

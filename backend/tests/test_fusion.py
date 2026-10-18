@@ -1,6 +1,7 @@
 import pytest
 
 from veggie_app.matching import fusion
+from veggie_app.matching.dish_structure import NO_STRUCTURE, DishStructure
 from veggie_app.matching.fusion import (
     CandidateRecipe,
     apply_calorie_orientation,
@@ -193,3 +194,49 @@ def test_rank_candidates_uses_the_ingredient_weights_it_is_given(
     rank_candidates([1.0, 0.0], ["oignon"], candidates, ingredient_weights=weights)
 
     assert received == [weights]
+
+
+def test_apply_structure_without_query_structure_returns_similarity_unchanged() -> None:
+    candidate = CandidateRecipe(
+        id=1, title_embedding=[1.0, 0.0], ingredient_names=[], protein_source=None,
+        dish_types=["ragoût"], cuisine="française",
+    )
+
+    assert fusion.apply_structure(0.7, NO_STRUCTURE, candidate) == 0.7
+
+
+def test_apply_structure_ignores_an_untagged_candidate() -> None:
+    candidate = CandidateRecipe(
+        id=1, title_embedding=[1.0, 0.0], ingredient_names=[], protein_source=None
+    )
+    query = DishStructure(frozenset({"ragoût"}), "française")
+
+    assert fusion.apply_structure(0.7, query, candidate) == 0.7
+
+
+def test_apply_structure_blends_the_structure_score() -> None:
+    candidate = CandidateRecipe(
+        id=1, title_embedding=[1.0, 0.0], ingredient_names=[], protein_source=None,
+        dish_types=["ragoût"], cuisine="française",
+    )
+    query = DishStructure(frozenset({"ragoût"}), "française")
+
+    result = fusion.apply_structure(0.6, query, candidate, structure_weight=0.25)
+
+    assert result == pytest.approx(0.75 * 0.6 + 0.25 * 1.0)
+
+
+def test_rank_candidates_prefers_the_same_kind_of_dish() -> None:
+    stew = CandidateRecipe(
+        id=1, title_embedding=[1.0, 0.0], ingredient_names=[], protein_source=None,
+        dish_types=["ragoût"], cuisine="française",
+    )
+    salad = CandidateRecipe(
+        id=2, title_embedding=[1.0, 0.0], ingredient_names=[], protein_source=None,
+        dish_types=["salade"], cuisine="japonaise",
+    )
+    query = DishStructure(frozenset({"ragoût"}), "française")
+
+    ranked = rank_candidates([1.0, 0.0], [], [salad, stew], query_structure=query)
+
+    assert [candidate_id for candidate_id, _ in ranked] == [1, 2]

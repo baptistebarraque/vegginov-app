@@ -269,3 +269,81 @@ def test_delete_recipe_removes_row_and_image_file(
     assert response.status_code == 204
     assert db_session.get(Recipe, recipe_id) is None
     assert not (image_service.settings.upload_dir / filename).exists()
+
+
+# --- Dish structure (dish_types / cuisine) ---
+
+
+def test_dish_structure_options_lists_both_vocabularies(
+    client: TestClient, db_session: Session
+) -> None:
+    _login_as_admin(client, db_session)
+
+    body = client.get("/admin/dish-structure-options").json()
+
+    assert "ragoût" in body["dish_types"]
+    assert "française" in body["cuisines"]
+
+
+def test_dish_structure_options_requires_admin_session(client: TestClient) -> None:
+    assert client.get("/admin/dish-structure-options").status_code == 401
+
+
+def test_update_recipe_sets_dish_types_and_cuisine(
+    client: TestClient, db_session: Session
+) -> None:
+    _login_as_admin(client, db_session)
+    recipe = _create_recipe(db_session)
+
+    response = client.put(
+        f"/admin/recipes/{recipe.id}",
+        data={
+            "title": "Lasagnes aux lentilles",
+            "ingredients": _ingredients_field([{"name": "lentilles", "quantity": None}]),
+            "dish_types": ["gratin", "pâtes"],
+            "cuisine": "italienne",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["dish_types"] == ["gratin", "pâtes"]
+    assert response.json()["cuisine"] == "italienne"
+    assert client.get(f"/admin/recipes/{recipe.id}").json()["dish_types"] == ["gratin", "pâtes"]
+
+
+def test_update_recipe_treats_an_empty_cuisine_as_none(
+    client: TestClient, db_session: Session
+) -> None:
+    _login_as_admin(client, db_session)
+    recipe = _create_recipe(db_session, cuisine="française")
+
+    response = client.put(
+        f"/admin/recipes/{recipe.id}",
+        data={
+            "title": "Curry",
+            "ingredients": _ingredients_field([{"name": "lentilles", "quantity": None}]),
+            "cuisine": "",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["cuisine"] is None
+
+
+def test_update_recipe_rejects_an_unknown_dish_type(
+    client: TestClient, db_session: Session
+) -> None:
+    _login_as_admin(client, db_session)
+    recipe = _create_recipe(db_session)
+
+    response = client.put(
+        f"/admin/recipes/{recipe.id}",
+        data={
+            "title": "Curry",
+            "ingredients": _ingredients_field([{"name": "lentilles", "quantity": None}]),
+            "dish_types": ["plat mystère"],
+        },
+    )
+
+    assert response.status_code == 400
+    assert "plat mystère" in response.json()["detail"]

@@ -535,3 +535,76 @@ def test_get_suggestions_weighs_ingredients_on_the_whole_corpus(
 
     assert [s.title for s in suggestions] == ["Gardée"]
     assert ["arachide"] in captured["lists"]
+
+
+def test_validate_dish_structure_accepts_known_values() -> None:
+    recipe_service.validate_dish_structure(["ragoût", "soupe"], "française")
+    recipe_service.validate_dish_structure([], None)
+
+
+def test_validate_dish_structure_rejects_unknown_values() -> None:
+    with pytest.raises(recipe_service.DishStructureError):
+        recipe_service.validate_dish_structure(["plat mystère"], None)
+    with pytest.raises(recipe_service.DishStructureError):
+        recipe_service.validate_dish_structure([], "martienne")
+
+
+def test_create_recipe_stores_dish_structure_without_blanks_or_duplicates(
+    db_session: Session,
+) -> None:
+    recipe = recipe_service.create_recipe(
+        db_session,
+        title="Lasagnes",
+        ingredients=[{"name": "lentilles", "quantity": None}],
+        dish_types=["gratin", "", "pâtes", "gratin"],
+        cuisine="italienne",
+    )
+
+    assert recipe.dish_types == ["gratin", "pâtes"]
+    assert recipe.cuisine == "italienne"
+
+
+def test_build_candidate_carries_dish_structure() -> None:
+    recipe = Recipe(
+        id=1,
+        title="Curry",
+        ingredients=[],
+        allergens=[],
+        dish_types=["curry"],
+        cuisine="indienne",
+        embedding=_unit_vector(0),
+    )
+
+    candidate = recipe_service.build_candidate(recipe)
+
+    assert list(candidate.dish_types) == ["curry"]
+    assert candidate.cuisine == "indienne"
+
+
+def test_get_suggestions_ranks_by_dish_structure_inferred_from_the_title(
+    db_session: Session,
+) -> None:
+    # Same title embedding and no ingredients: only the structure view can
+    # tell these two apart, and "bourguignon" names a French stew.
+    stew = Recipe(
+        title="Ragoût",
+        ingredients=[],
+        allergens=[],
+        dish_types=["ragoût"],
+        cuisine="française",
+        embedding=_unit_vector(0),
+    )
+    salad = Recipe(
+        title="Salade",
+        ingredients=[],
+        allergens=[],
+        dish_types=["salade"],
+        cuisine="japonaise",
+        embedding=_unit_vector(0),
+    )
+    db_session.add_all([salad, stew])
+    db_session.flush()
+
+    suggestions = recipe_service.get_suggestions(db_session, "Bœuf bourguignon", [])
+
+    assert [s.title for s in suggestions] == ["Ragoût", "Salade"]

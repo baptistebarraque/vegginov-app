@@ -32,6 +32,12 @@ class Recipe(Base):
     # Cost indicator on a 1..3 scale (1 = cheapest), rendered as € symbols in
     # the UI. Stored as an int so it stays sortable and easy to extend.
     price_tier: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Dish structure (matching/dish_structure.py): what form the dish takes
+    # (one or more of DISH_TYPES) and its cuisine (one of CUISINES).
+    dish_types: Mapped[list[str]] = mapped_column(
+        ARRAY(String), nullable=False, default=list, server_default="{}"
+    )
+    cuisine: Mapped[str | None] = mapped_column(String(64), nullable=True)
     instructions: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False, default=list)
     image_filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
     embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIM), nullable=False)

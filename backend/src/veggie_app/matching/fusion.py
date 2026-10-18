@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from veggie_app.matching.dish_structure import NO_STRUCTURE, DishStructure, structure_score
 from veggie_app.matching.ingredient_similarity import (
     IngredientWeights,
     compute_ingredient_weights,
@@ -23,6 +24,10 @@ from veggie_app.matching.nutrition_view import calorie_orientation_score
 from veggie_app.matching.similarity import normalize_rows
 
 DEFAULT_TITLE_WEIGHT = 0.3
+
+# How much the dish-structure match (matching/dish_structure.py) pulls on the
+# similarity, when both the query and the recipe have one to compare.
+STRUCTURE_WEIGHT = 0.25
 
 # How much the calorie-orientation match (matching/nutrition_view.py) pulls on
 # the final score, blended on top of the title+ingredients similarity. Kept
@@ -38,12 +43,31 @@ class CandidateRecipe:
     ingredient_names: list[str]
     protein_source: str | None
     calories_per_portion: float | None = None
+    dish_types: Sequence[str] = ()
+    cuisine: str | None = None
 
 
 def fuse_scores(
     title_score: float, ingredients_score: float, title_weight: float = DEFAULT_TITLE_WEIGHT
 ) -> float:
     return title_weight * title_score + (1 - title_weight) * ingredients_score
+
+
+def apply_structure(
+    similarity: float,
+    query_structure: DishStructure,
+    candidate: CandidateRecipe,
+    structure_weight: float = STRUCTURE_WEIGHT,
+) -> float:
+    """Blends the dish-structure match into a recipe's similarity. Returned
+    untouched when there is nothing to compare (an unknown dish name, an
+    untagged recipe), so those rank exactly as before this term existed."""
+    if query_structure.is_empty:
+        return similarity
+    score = structure_score(query_structure, candidate.dish_types, candidate.cuisine)
+    if score is None:
+        return similarity
+    return (1 - structure_weight) * similarity + structure_weight * score
 
 
 def apply_calorie_orientation(
@@ -82,6 +106,8 @@ def rank_candidates(
     title_weight: float = DEFAULT_TITLE_WEIGHT,
     calorie_orientation: str | None = None,
     ingredient_weights: IngredientWeights | None = None,
+    query_structure: DishStructure = NO_STRUCTURE,
+    structure_weight: float = STRUCTURE_WEIGHT,
 ) -> list[tuple[int, float]]:
     """Returns (candidate_id, score) pairs, highest score first, truncated to
     top_k. When calorie_orientation is set, each recipe's similarity is nudged
@@ -101,12 +127,17 @@ def rank_candidates(
         (
             candidate.id,
             apply_calorie_orientation(
-                fuse_scores(
-                    float(title_score),
-                    prepared_ingredients_view_score(
-                        prepared_query, candidate.ingredient_names, candidate.protein_source
+                apply_structure(
+                    fuse_scores(
+                        float(title_score),
+                        prepared_ingredients_view_score(
+                            prepared_query, candidate.ingredient_names, candidate.protein_source
+                        ),
+                        title_weight,
                     ),
-                    title_weight,
+                    query_structure,
+                    candidate,
+                    structure_weight,
                 ),
                 candidate.calories_per_portion,
                 calorie_orientation,

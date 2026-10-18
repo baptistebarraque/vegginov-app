@@ -2,7 +2,7 @@ import { X } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import ProteinSourceCombobox from "./ProteinSourceCombobox";
 import { Button } from "./ui/Button";
-import type { RecipeFormValues } from "../types/recipe";
+import type { DishStructureOptions, RecipeFormValues } from "../types/recipe";
 
 interface AdminRecipeFormProps {
   onSubmit: (values: RecipeFormValues, removeExistingImage: boolean) => void;
@@ -15,6 +15,9 @@ interface AdminRecipeFormProps {
   /** Known protein_source vocabulary (see matching/substitution.py), fetched
    * by the parent page — the combobox only ever commits one of these. */
   proteinSourceOptions?: string[];
+  /** Dish type and cuisine vocabularies (see matching/dish_structure.py),
+   * fetched by the parent page. */
+  dishStructureOptions?: DishStructureOptions;
   submitLabel?: string;
   loadingLabel?: string;
 }
@@ -25,6 +28,15 @@ interface IngredientRow {
 }
 
 const EMPTY_INGREDIENT_ROW: IngredientRow = { name: "", quantity: "" };
+
+const NO_DISH_STRUCTURE_OPTIONS: DishStructureOptions = { dish_types: [], cuisines: [] };
+
+/** The vocabulary plus anything already selected that it doesn't list, so a
+ * recipe's tags stay visible (and are saved back) even if the options failed
+ * to load. */
+function withSelected(options: string[], selected: string[]): string[] {
+  return [...options, ...selected.filter((value) => !options.includes(value))];
+}
 
 export const inputClassName =
   "rounded-md border border-lisiere bg-feuille-haut px-3 py-2 text-craie focus:border-pousse focus:ring-2 focus:ring-pousse/25 focus:outline-none";
@@ -46,6 +58,7 @@ function AdminRecipeForm({
   initialValues,
   existingImageUrl = null,
   proteinSourceOptions = [],
+  dishStructureOptions = NO_DISH_STRUCTURE_OPTIONS,
   submitLabel = "Ajouter la recette",
   loadingLabel = "Ajout...",
 }: AdminRecipeFormProps) {
@@ -68,6 +81,8 @@ function AdminRecipeForm({
     initialValues?.caloriesPerPortion?.toString() ?? "",
   );
   const [priceTier, setPriceTier] = useState<number | null>(initialValues?.priceTier ?? null);
+  const [dishTypes, setDishTypes] = useState<string[]>(initialValues?.dishTypes ?? []);
+  const [cuisine, setCuisine] = useState<string | null>(initialValues?.cuisine ?? null);
   const [instructionsText, setInstructionsText] = useState(
     initialValues?.instructions.join("\n") ?? "",
   );
@@ -88,6 +103,12 @@ function AdminRecipeForm({
 
   function removeIngredientRow(index: number) {
     setIngredientRows((rows) => rows.filter((_, rowIndex) => rowIndex !== index));
+  }
+
+  function toggleDishType(dishType: string, checked: boolean) {
+    setDishTypes((current) =>
+      checked ? [...current, dishType] : current.filter((value) => value !== dishType),
+    );
   }
 
   function handleImageChange(file: File | null) {
@@ -125,6 +146,8 @@ function AdminRecipeForm({
         proteinGrams,
         caloriesPerPortion,
         priceTier,
+        dishTypes,
+        cuisine,
         instructions,
         image,
       },
@@ -269,6 +292,44 @@ function AdminRecipeForm({
           <option value="1">€ — économique</option>
           <option value="2">€€ — intermédiaire</option>
           <option value="3">€€€ — coûteux</option>
+        </select>
+      </label>
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-2 text-left text-sm font-medium text-craie">
+          Types de plat (optionnel)
+        </legend>
+        <div className="flex flex-wrap gap-2">
+          {withSelected(dishStructureOptions.dish_types, dishTypes).map((dishType) => (
+            <label
+              key={dishType}
+              className="inline-flex items-center gap-1.5 rounded-md border border-lisiere px-2 py-1 text-sm text-craie has-[:checked]:border-pousse"
+            >
+              <input
+                type="checkbox"
+                checked={dishTypes.includes(dishType)}
+                onChange={(event) => toggleDishType(dishType, event.target.checked)}
+                className="accent-pousse"
+              />
+              {dishType}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <label className={labelClassName}>
+        Cuisine (optionnel)
+        <select
+          value={cuisine ?? ""}
+          onChange={(event) => setCuisine(event.target.value === "" ? null : event.target.value)}
+          className={inputClassName}
+        >
+          <option value="">Non précisée</option>
+          {withSelected(dishStructureOptions.cuisines, cuisine === null ? [] : [cuisine]).map(
+            (option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ),
+          )}
         </select>
       </label>
       <label className={labelClassName}>

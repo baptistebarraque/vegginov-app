@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router";
 import {
   CsvImportValidationError,
   createRecipe,
+  getDishStructureOptions,
   getProteinSourceOptions,
   importRecipesCsv,
 } from "../api/adminRecipes";
@@ -15,13 +16,17 @@ import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { Eyebrow } from "../components/ui/Eyebrow";
 import { useSession } from "../hooks/useSession";
-import type { CsvImportRowError, RecipeFormValues } from "../types/recipe";
+import type { CsvImportRowError, DishStructureOptions, RecipeFormValues } from "../types/recipe";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 function AdminUploadPage() {
   const { user: admin, isChecking: isCheckingSession } = useSession({ requireAdmin: true });
   const [proteinSourceOptions, setProteinSourceOptions] = useState<string[]>([]);
+  const [dishStructureOptions, setDishStructureOptions] = useState<DishStructureOptions>({
+    dish_types: [],
+    cuisines: [],
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -39,6 +44,10 @@ function AdminUploadPage() {
     getProteinSourceOptions()
       .then(setProteinSourceOptions)
       .catch(() => setProteinSourceOptions([]));
+    // On failure the form keeps showing (and saving) a recipe's current tags.
+    getDishStructureOptions()
+      .then(setDishStructureOptions)
+      .catch(() => setDishStructureOptions({ dish_types: [], cuisines: [] }));
   }, [admin]);
 
   async function handleSubmit(values: RecipeFormValues) {
@@ -116,6 +125,7 @@ function AdminUploadPage() {
             onSubmit={handleSubmit}
             isLoading={isSubmitting}
             proteinSourceOptions={proteinSourceOptions}
+                dishStructureOptions={dishStructureOptions}
           />
         </div>
 

@@ -43,6 +43,7 @@ from statistics import mean
 from sqlalchemy import select
 
 from veggie_app.database import SessionLocal
+from veggie_app.matching.dish_structure import infer_dish_structure
 from veggie_app.matching.embeddings import embed_text
 from veggie_app.matching.fusion import rank_candidates
 from veggie_app.models.recipe import Recipe
@@ -189,6 +190,7 @@ def rank_queries(queries: list[dict], recipes: list[Recipe]) -> list[QueryResult
             query["ingredients"],
             candidates,
             top_k=len(candidates),
+            query_structure=infer_dish_structure(query["title"]),
         )
         ranked_titles = [titles_by_id[recipe_id] for recipe_id, _ in ranked]
         results.append(

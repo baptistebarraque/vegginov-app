@@ -1,0 +1,1312 @@
+{
+ "_doc": [
+  "Dish structure tags (Recipe.dish_types / Recipe.cuisine) for the recipes of the dev database, keyed by exact title. Applied with: uv run python -m scripts.apply_recipe_tags",
+  "Drafted 2026-10-17: lexicon pre-fill (matching/dish_lexicon.py), then every recipe reviewed by hand."
+ ],
+ "tags": {
+  "Accras de pois chiches écrasés au piment et ciboule": {
+   "dish_types": [
+    "pané-frit"
+   ],
+   "cuisine": "latino-américaine et caribéenne"
+  },
+  "Arepas garnies au jacque effiloché et avocat": {
+   "dish_types": [
+    "galette"
+   ],
+   "cuisine": "latino-américaine et caribéenne"
+  },
+  "Bagels aux carottes fumées et fromage frais": {
+   "dish_types": [
+    "sandwich"
+   ],
+   "cuisine": "nord-américaine"
+  },
+  "Baingan bharta d'aubergines grillées aux épices indiennes": {
+   "dish_types": [
+    "curry"
+   ],
+   "cuisine": "indienne"
+  },
+  "Banh mi au jacque et légumes marinés": {
+   "dish_types": [
+    "sandwich"
+   ],
+   "cuisine": "asie du sud-est"
+  },
+  "Bao vapeur aux shiitakés séchés et chou chinois": {
+   "dish_types": [
+    "chausson"
+   ],
+   "cuisine": "chinoise"
+  },
+  "Bhurji de tofu émietté aux tomates et épices": {
+   "dish_types": [
+    "œufs"
+   ],
+   "cuisine": "indienne"
+  },
+  "Bibimbap au tofu émietté et légumes croquants": {
+   "dish_types": [
+    "riz"
+   ],
+   "cuisine": "coréenne"
+  },
+  "Blanquette de seitan aux champignons": {
+   "dish_types": [
+    "ragoût"
+   ],
+   "cuisine": "française"
+  },
+  "Blinis aux carottes fumées et crème d'aneth": {
+   "dish_types": [
+    "galette"
+   ],
+   "cuisine": "europe centrale et de l'est"
+  },
+  "Bolognaise de soja texturé aux tomates et basilic": {
+   "dish_types": [
+    "pâtes"
+   ],
+   "cuisine": "italienne"
+  },
+  "Boulettes de champignons hachés à la sauce tomate": {
+   "dish_types": [
+    "boulettes"
+   ],
+   "cuisine": "italienne"
+  },
+  "Bourguignon de seitan aux carottes et vin rouge": {
+   "dish_types": [
+    "ragoût"
+   ],
+   "cuisine": "française"
+  },
+  "Brochettes de tempeh mariné aux légumes grillés": {
+   "dish_types": [
+    "rôti-grillé"
+   ],
+   "cuisine": null
+  },
+  "Brouillade de tofu émietté aux épinards": {
+   "dish_types": [
+    "œufs"
+   ],
+   "cuisine": null
+  },
+  "Buddha bowl quinoa et légumes rôtis": {
+   "dish_types": [
+    "salade"
+   ],
+   "cuisine": null
+  },
+  "Burger de haricots noirs": {
+   "dish_types": [
+    "sandwich"
+   ],
+   "cuisine": "nord-américaine"
+  },
+  "Burger de tempeh grillé au chou rouge": {
+   "dish_types": [
+    "sandwich"
+   ],
+   "cuisine": "nord-américaine"
+  },
+  "Burrito bowl aux haricots rouges et riz complet": {
+   "dish_types": [
+    "riz",
+    "tacos"
+   ],
+   "cuisine": "mexicaine"
+  },
+  "Cake salé au tofu émietté et olives": {
+   "dish_types": [
+    "terrine"
+   ],
+   "cuisine": "française"
+  },
+  "Caponata sicilienne aux aubergines et câpres": {
+   "dish_types": [
+    "ragoût"
+   ],
+   "cuisine": "italienne"
+  },
+  "Carbonnade de jacque à la bière brune et oignons": {
+   "dish_types": [
+    "ragoût"
+   ],
+   "cuisine": "europe du nord"
+  },
+  "Carpaccio de carottes fumées et graines de courge": {
+   "dish_types": [
+    "salade"
+   ],
+   "cuisine": "italienne"
+  },
+  "Cassoulet végétarien aux haricots blancs": {
+   "dish_types": [
+    "gratin",
+    "ragoût"
+   ],
+   "cuisine": "française"
+  },
+  "Ceviche végétal de coeurs de palmier au citron vert": {
+   "dish_types": [
+    "salade"
+   ],
+   "cuisine": "latino-américaine et caribéenne"
+  },
+  "Chana masala aux pois chiches et tomates": {
+   "dish_types": [
+    "curry"
+   ],
+   "cuisine": "indienne"
+  },
+  "Chili de haricots rouges au maïs et poivrons": {
+   "dish_types": [
+    "ragoût"
+   ],
+   "cuisine": "mexicaine"
+  },
+  "Chili de haricots rouges épicé": {
+   "dish_types": [
+    "ragoût"
+   ],
+   "cuisine": "mexicaine"
+  },
+  "Chili sin carne": {
+   "dish_types": [
+    "ragoût"
+   ],
+   "cuisine": "mexicaine"
+  },
+  "Chili épicé au seitan et aux haricots noirs": {
+   "dish_types": [
+    "ragoût"
+   ],
+   "cuisine": "mexicaine"
+  },
+  "Chou farci au boulgour et aux noix": {
+   "dish_types": [
+    "farci"
+   ],
+   "cuisine": "française"
+  },
+  "Choucroute végétarienne au tofu fumé": {
+   "dish_types": [
+    "ragoût"
+   ],
+   "cuisine": "française"
+  },
+  "Chowder de maïs doux à la coco fumée": {
+   "dish_types": [
+    "soupe"
+   ],
+   "cuisine": "nord-américaine"
+  },
+  "Clafoutis salé aux tomates marinées et chèvre": {
+   "dish_types": [
+    "gratin"
+   ],
+   "cuisine": "française"
+  },
+  "Club sandwich au tempeh fumé, avocat et laitue": {
+   "dish_types": [
+    "sandwich"
+   ],
+   "cuisine": "nord-américaine"
+  },
+  "Congee de riz aux shiitakés séchés et gingembre": {
+   "dish_types": [
+    "riz",
+    "soupe"
+   ],
+   "cuisine": "chinoise"
+  },
+  "Courgettes farcies aux champignons hachés et ricotta": {
+   "dish_types": [
+    "farci"
+   ],
+   "cuisine": null
+  },
+  "Couscous végétarien aux sept légumes": {
+   "dish_types": [
+    "ragoût"
+   ],
+   "cuisine": "maghrébine"
+  },
+  "Croque-monsieur végétarien": {
+   "dish_types": [
+    "sandwich"
+   ],
+   "cuisine": "française"
+  },
+  "Croquettes de coeurs de palmier et sauce tartare": {
+   "dish_types": [
+    "pané-frit"
+   ],
+   "cuisine": null
+  },
+  "Crumble salé de légumes racines à la coco fumée": {
+   "dish_types": [
+    "gratin"
+   ],
+   "cuisine": null
+  },
+  "Curry d'aubergines aux pois chiches et lait de coco": {
+   "dish_types": [
+    "curry"
+   ],
+   "cuisine": "indienne"
+  },
+  "Curry de chou-fleur (façon aloo gobi)": {
+   "dish_types": [
+    "curry"
+   ],
+   "cuisine": "indienne"
+  },
+  "Curry de chou-fleur aux lentilles corail": {
+   "dish_types": [
+    "curry"
+   ],
+   "cuisine": "indienne"
+  },
+  "Curry de jacque au lait de coco et épinards": {
+   "dish_types": [
+    "curry"
+   ],
+   "cuisine": "indienne"
+  },
+  "Curry de lentilles corail": {
+   "dish_types": [
+    "curry"
+   ],
+   "cuisine": "indienne"
+  },
+  "Curry de légumes au lait de coco": {
+   "dish_types": [
+    "curry"
+   ],
+   "cuisine": "asie du sud-est"
+  },
+  "Curry de patate douce et pois chiches": {
+   "dish_types": [
+    "curry"
+   ],
+   "cuisine": "indienne"
+  },
+  "Curry de pois chiches": {
+   "dish_types": [
+    "curry"
+   ],
+   "cuisine": "indienne"
+  },
+  "Curry japonais au seitan épicé et pommes de terre": {
+   "dish_types": [
+    "curry"
+   ],
+   "cuisine": "japonaise"
+  },
+  "Curry thaï au tofu, aubergines et citronnelle": {
+   "dish_types": [
+    "curry"
+   ],
+   "cuisine": "asie du sud-est"
+  },
+  "Curry vert thaï végétarien": {
+   "dish_types": [
+    "curry"
+   ],
+   "cuisine": "asie du sud-est"
+  },
+  "Dahl de lentilles corail au lait de coco": {
+   "dish_types": [
+    "curry"
+   ],
+   "cuisine": "indienne"
+  },
+  "Dal de lentilles et épinards": {
+   "dish_types": [
+    "curry"
+   ],
+   "cuisine": "indienne"
+  },
+  "Empanadas aux haricots noirs et maïs": {
+   "dish_types": [
+    "chausson"
+   ],
+   "cuisine": "latino-américaine et caribéenne"
+  },
+  "Empanadas végétariennes": {
+   "dish_types": [
+    "chausson"
+   ],
+   "cuisine": "latino-américaine et caribéenne"
+  },
+  "Enchiladas aux haricots noirs et sauce tomate épicée": {
+   "dish_types": [
+    "tacos"
+   ],
+   "cuisine": "mexicaine"
+  },
+  "Falafels de pois chiches écrasés et sauce tahini": {
+   "dish_types": [
+    "boulettes",
+    "pané-frit"
+   ],
+   "cuisine": "moyen-orientale"
+  },
+  "Falafels et sauce au yaourt": {
+   "dish_types": [
+    "boulettes",
+    "pané-frit"
+   ],
+   "cuisine": "moyen-orientale"
+  },
+  "Fatteh de pois chiches au yaourt et pain grillé": {
+   "dish_types": [
+    "salade"
+   ],
+   "cuisine": "moyen-orientale"
+  },
+  "Feijoada végétarienne aux haricots rouges": {
+   "dish_types": [
+    "ragoût"
+   ],
+   "cuisine": "latino-américaine et caribéenne"
+  },
+  "Fricassée de coeurs de palmier au citron et câpres": {
+   "dish_types": [
+    "ragoût"
+   ],
+   "cuisine": "française"
+  },
+  "Frittata aux courgettes et à la feta": {
+   "dish_types": [
+    "œufs"
+   ],
+   "cuisine": "italienne"
+  },
+  "Gado-gado de tempeh à la sauce cacahuète": {
+   "dish_types": [
+    "salade"
+   ],
+   "cuisine": "asie du sud-est"
+  },
+  "Galettes de pois chiches": {
+   "dish_types": [
+    "galette"
+   ],
+   "cuisine": "moyen-orientale"
+  },
+  "Galettes de pois chiches au cumin et yaourt à la menthe": {
+   "dish_types": [
+    "galette"
+   ],
+   "cuisine": "moyen-orientale"
+  },
+  "Gaspacho de tomates marinées au poivron": {
+   "dish_types": [
+    "soupe"
+   ],
+   "cuisine": "espagnole"
+  },
+  "Gnocchis à la crème de champignons": {
+   "dish_types": [
+    "pâtes"
+   ],
+   "cuisine": "italienne"
+  },
+  "Gnocchis à la sauce tomate et basilic": {
+   "dish_types": [
+    "pâtes"
+   ],
+   "cuisine": "italienne"
+  },
+  "Goulasch de protéines de soja texturées au paprika": {
+   "dish_types": [
+    "ragoût"
+   ],
+   "cuisine": "europe centrale et de l'est"
+  },
+  "Gratin d'aubergines à la tomate et mozzarella": {
+   "dish_types": [
+    "gratin"
+   ],
+   "cuisine": "italienne"
+  },
+  "Gratin dauphinois": {
+   "dish_types": [
+    "gratin"
+   ],
+   "cuisine": "française"
+  },
+  "Gratin de butternut au comté et à la sauge": {
+   "dish_types": [
+    "gratin"
+   ],
+   "cuisine": "française"
+  },
+  "Gratin de chou-fleur à la béchamel": {
+   "dish_types": [
+    "gratin"
+   ],
+   "cuisine": "française"
+  },
+  "Gratin de courgettes": {
+   "dish_types": [
+    "gratin"
+   ],
+   "cuisine": "française"
+  },
+  "Gumbo végétarien aux haricots rouges épicés et gombos": {
+   "dish_types": [
+    "ragoût"
+   ],
+   "cuisine": "nord-américaine"
+  },
+  "Gyozas au seitan haché et chou chinois": {
+   "dish_types": [
+    "chausson"
+   ],
+   "cuisine": "japonaise"
+  },
+  "Hachis parmentier au seitan haché": {
+   "dish_types": [
+    "gratin"
+   ],
+   "cuisine": "française"
+  },
+  "Haricots blancs au four à la tomate et à la sauge": {
+   "dish_types": [
+    "ragoût"
+   ],
+   "cuisine": "nord-américaine"
+  },
+  "Harira aux lentilles, pois chiches et coriandre": {
+   "dish_types": [
+    "soupe"
+   ],
+   "cuisine": "maghrébine"
+  },
+  "Houmous crémeux et assiette de légumes croquants": {
+   "dish_types": [
+    "salade"
+   ],
+   "cuisine": "moyen-orientale"
+  },
+  "Houmous maison et légumes croquants": {
+   "dish_types": [
+    "salade"
+   ],
+   "cuisine": "moyen-orientale"
+  },
+  "Katsu de tofu ferme pané et riz": {
+   "dish_types": [
+    "pané-frit",
+    "riz"
+   ],
+   "cuisine": "japonaise"
+  },
+  "Kebab de seitan épicé en pain pita": {
+   "dish_types": [
+    "sandwich"
+   ],
+   "cuisine": "moyen-orientale"
+  },
+  "Keftas de seitan haché aux épices et boulgour": {
+   "dish_types": [
+    "boulettes"
+   ],
+   "cuisine": "maghrébine"
+  },
+  "Khachapuri géorgien au fromage fondu et œuf": {
+   "dish_types": [
+    "tarte"
+   ],
+   "cuisine": "europe centrale et de l'est"
+  },
+  "Khichdi de lentilles corail au riz basmati": {
+   "dish_types": [
+    "riz"
+   ],
+   "cuisine": "indienne"
+  },
+  "Lasagnes aux lentilles et à la béchamel": {
+   "dish_types": [
+    "gratin",
+    "pâtes"
+   ],
+   "cuisine": "italienne"
+  },
+  "Lasagnes aux légumes": {
+   "dish_types": [
+    "gratin",
+    "pâtes"
+   ],
+   "cuisine": "italienne"
+  },
+  "Mafé de haricots rouges à la purée de cacahuète": {
+   "dish_types": [
+    "ragoût"
+   ],
+   "cuisine": "africaine"
+  },
+  "Mapo tofu aux shiitakés séchés et sauce pimentée": {
+   "dish_types": [
+    "ragoût"
+   ],
+   "cuisine": "chinoise"
+  },
+  "Minestrone aux haricots blancs et petites pâtes": {
+   "dish_types": [
+    "soupe"
+   ],
+   "cuisine": "italienne"
+  },
+  "Misir wot de lentilles brunes aux épices éthiopiennes": {
+   "dish_types": [
+    "ragoût",
+    "curry"
+   ],
+   "cuisine": "africaine"
+  },
+  "Moqueca de haricots noirs au lait de coco": {
+   "dish_types": [
+    "ragoût"
+   ],
+   "cuisine": "latino-américaine et caribéenne"
+  },
+  "Moussaka végétarienne aux lentilles corail": {
+   "dish_types": [
+    "gratin"
+   ],
+   "cuisine": "grecque"
+  },
+  "Muffins salés au quinoa et légumes": {
+   "dish_types": [
+    "terrine"
+   ],
+   "cuisine": null
+  },
+  "Mujaddara de riz aux lentilles et oignons frits": {
+   "dish_types": [
+    "riz"
+   ],
+   "cuisine": "moyen-orientale"
+  },
+  "Nasi goreng au soja texturé et légumes": {
+   "dish_types": [
+    "riz"
+   ],
+   "cuisine": "asie du sud-est"
+  },
+  "Nouilles dan dan aux champignons hachés": {
+   "dish_types": [
+    "nouilles"
+   ],
+   "cuisine": "chinoise"
+  },
+  "Nouilles sautées au tofu (pad thaï végétarien)": {
+   "dish_types": [
+    "nouilles"
+   ],
+   "cuisine": "asie du sud-est"
+  },
+  "Nouilles soba sautées aux légumes croquants": {
+   "dish_types": [
+    "nouilles"
+   ],
+   "cuisine": "japonaise"
+  },
+  "Okonomiyaki au tofu émietté et chou blanc": {
+   "dish_types": [
+    "galette"
+   ],
+   "cuisine": "japonaise"
+  },
+  "Omelette aux légumes": {
+   "dish_types": [
+    "œufs"
+   ],
+   "cuisine": null
+  },
+  "Orzotto d'orge à la coco fumée et petits pois": {
+   "dish_types": [
+    "riz"
+   ],
+   "cuisine": "italienne"
+  },
+  "Pad thaï au tofu et cacahuètes": {
+   "dish_types": [
+    "nouilles"
+   ],
+   "cuisine": "asie du sud-est"
+  },
+  "Paella végétarienne aux artichauts et haricots blancs": {
+   "dish_types": [
+    "riz"
+   ],
+   "cuisine": "espagnole"
+  },
+  "Pain de légumes au soja texturé et tomates": {
+   "dish_types": [
+    "terrine"
+   ],
+   "cuisine": null
+  },
+  "Pancakes à la banane": {
+   "dish_types": [
+    "galette"
+   ],
+   "cuisine": "nord-américaine"
+  },
+  "Panzanella aux tomates marinées et basilic": {
+   "dish_types": [
+    "salade"
+   ],
+   "cuisine": "italienne"
+  },
+  "Papillotes de tofu ferme aux légumes du soleil": {
+   "dish_types": [
+    "rôti-grillé"
+   ],
+   "cuisine": "française"
+  },
+  "Pappa al pomodoro aux tomates marinées et basilic": {
+   "dish_types": [
+    "soupe"
+   ],
+   "cuisine": "italienne"
+  },
+  "Parmentier de lentilles à la patate douce": {
+   "dish_types": [
+    "gratin"
+   ],
+   "cuisine": "française"
+  },
+  "Pastilla végétarienne au seitan haché et amandes": {
+   "dish_types": [
+    "tarte"
+   ],
+   "cuisine": "maghrébine"
+  },
+  "Pho aux shiitakés séchés et nouilles de riz": {
+   "dish_types": [
+    "soupe",
+    "nouilles"
+   ],
+   "cuisine": "asie du sud-est"
+  },
+  "Picadillo cubain au seitan haché et olives vertes": {
+   "dish_types": [
+    "ragoût"
+   ],
+   "cuisine": "latino-américaine et caribéenne"
+  },
+  "Pizza aux légumes grillés et mozzarella": {
+   "dish_types": [
+    "tarte"
+   ],
+   "cuisine": "italienne"
+  },
+  "Pizza margherita maison": {
+   "dish_types": [
+    "tarte"
+   ],
+   "cuisine": "italienne"
+  },
+  "Pleurotes croustillants panés au babeurre et paprika fumé": {
+   "dish_types": [
+    "pané-frit"
+   ],
+   "cuisine": "nord-américaine"
+  },
+  "Poivrons farcis au quinoa et aux herbes fraîches": {
+   "dish_types": [
+    "farci"
+   ],
+   "cuisine": null
+  },
+  "Poivrons farcis au riz et fromage": {
+   "dish_types": [
+    "farci"
+   ],
+   "cuisine": null
+  },
+  "Poke bowl au tofu fumé et edamame": {
+   "dish_types": [
+    "riz"
+   ],
+   "cuisine": "nord-américaine"
+  },
+  "Polenta crémeuse aux champignons rôtis": {
+   "dish_types": [
+    "purée"
+   ],
+   "cuisine": "italienne"
+  },
+  "Polenta grillée aux haricots rouges épicés": {
+   "dish_types": [
+    "purée"
+   ],
+   "cuisine": "italienne"
+  },
+  "Porridge aux fruits et noix": {
+   "dish_types": [],
+   "cuisine": null
+  },
+  "Pot-au-feu végétarien au seitan et légumes d'hiver": {
+   "dish_types": [
+    "ragoût",
+    "soupe"
+   ],
+   "cuisine": "française"
+  },
+  "Poêlée de haricots noirs aux patates douces et citron vert": {
+   "dish_types": [
+    "sauté"
+   ],
+   "cuisine": "latino-américaine et caribéenne"
+  },
+  "Poêlée de pleurotes à la crème et au vin blanc": {
+   "dish_types": [
+    "sauté"
+   ],
+   "cuisine": "française"
+  },
+  "Poêlée de quinoa aux légumes": {
+   "dish_types": [
+    "sauté"
+   ],
+   "cuisine": null
+  },
+  "Purée de céleri-rave et pleurotes en persillade": {
+   "dish_types": [
+    "purée"
+   ],
+   "cuisine": "française"
+  },
+  "Pâtes alla norma aux aubergines et ricotta": {
+   "dish_types": [
+    "pâtes"
+   ],
+   "cuisine": "italienne"
+  },
+  "Pâtes au pesto de noix et roquette": {
+   "dish_types": [
+    "pâtes"
+   ],
+   "cuisine": "italienne"
+  },
+  "Pâtes au pesto et parmesan": {
+   "dish_types": [
+    "pâtes"
+   ],
+   "cuisine": "italienne"
+  },
+  "Pâtes à la tomate et mozzarella": {
+   "dish_types": [
+    "pâtes"
+   ],
+   "cuisine": "italienne"
+  },
+  "Quesadillas aux haricots rouges et cheddar": {
+   "dish_types": [
+    "tacos"
+   ],
+   "cuisine": "mexicaine"
+  },
+  "Quiche aux poireaux": {
+   "dish_types": [
+    "tarte"
+   ],
+   "cuisine": "française"
+  },
+  "Quiche aux poireaux et au chèvre frais": {
+   "dish_types": [
+    "tarte"
+   ],
+   "cuisine": "française"
+  },
+  "Rajma masala aux haricots rouges épicés et riz basmati": {
+   "dish_types": [
+    "curry",
+    "riz"
+   ],
+   "cuisine": "indienne"
+  },
+  "Ramen aux shiitakés séchés et miso": {
+   "dish_types": [
+    "nouilles",
+    "soupe"
+   ],
+   "cuisine": "japonaise"
+  },
+  "Ratatouille": {
+   "dish_types": [
+    "ragoût"
+   ],
+   "cuisine": "française"
+  },
+  "Ratatouille provençale au thym": {
+   "dish_types": [
+    "ragoût"
+   ],
+   "cuisine": "française"
+  },
+  "Raviolis à la crème de noix et sauge": {
+   "dish_types": [
+    "pâtes"
+   ],
+   "cuisine": "italienne"
+  },
+  "Rendang de tempeh au lait de coco": {
+   "dish_types": [
+    "curry"
+   ],
+   "cuisine": "asie du sud-est"
+  },
+  "Risotto aux Champignons": {
+   "dish_types": [
+    "riz"
+   ],
+   "cuisine": "italienne"
+  },
+  "Risotto aux champignons": {
+   "dish_types": [
+    "riz"
+   ],
+   "cuisine": "italienne"
+  },
+  "Risotto crémeux aux champignons et parmesan": {
+   "dish_types": [
+    "riz"
+   ],
+   "cuisine": "italienne"
+  },
+  "Riz cantonais végétarien": {
+   "dish_types": [
+    "riz"
+   ],
+   "cuisine": "chinoise"
+  },
+  "Riz créole aux haricots rouges épicés": {
+   "dish_types": [
+    "riz"
+   ],
+   "cuisine": "latino-américaine et caribéenne"
+  },
+  "Riz pilaf aux haricots rouges épicés et poivrons": {
+   "dish_types": [
+    "riz"
+   ],
+   "cuisine": null
+  },
+  "Riz sauté au tofu fumé et petits pois": {
+   "dish_types": [
+    "riz"
+   ],
+   "cuisine": "chinoise"
+  },
+  "Riz sauté aux légumes et œufs": {
+   "dish_types": [
+    "riz"
+   ],
+   "cuisine": "chinoise"
+  },
+  "Salade César végétarienne": {
+   "dish_types": [
+    "salade"
+   ],
+   "cuisine": "nord-américaine"
+  },
+  "Salade Waldorf aux noix, pomme et céleri": {
+   "dish_types": [
+    "salade"
+   ],
+   "cuisine": "nord-américaine"
+  },
+  "Salade de coeurs de palmier à l'avocat et citron vert": {
+   "dish_types": [
+    "salade"
+   ],
+   "cuisine": null
+  },
+  "Salade de lentilles aux éclats de coco fumée": {
+   "dish_types": [
+    "salade"
+   ],
+   "cuisine": null
+  },
+  "Salade de lentilles et feta": {
+   "dish_types": [
+    "salade"
+   ],
+   "cuisine": null
+  },
+  "Salade de pâtes froide": {
+   "dish_types": [
+    "pâtes",
+    "salade"
+   ],
+   "cuisine": null
+  },
+  "Salade de quinoa": {
+   "dish_types": [
+    "salade"
+   ],
+   "cuisine": null
+  },
+  "Salade de quinoa à la grenade et à la feta": {
+   "dish_types": [
+    "salade"
+   ],
+   "cuisine": null
+  },
+  "Salade grecque": {
+   "dish_types": [
+    "salade"
+   ],
+   "cuisine": "grecque"
+  },
+  "Sambar de lentilles corail aux légumes": {
+   "dish_types": [
+    "curry"
+   ],
+   "cuisine": "indienne"
+  },
+  "Samoussas aux champignons hachés et petits pois": {
+   "dish_types": [
+    "chausson",
+    "pané-frit"
+   ],
+   "cuisine": "indienne"
+  },
+  "Sandwich aux pois chiches écrasés et céleri": {
+   "dish_types": [
+    "sandwich"
+   ],
+   "cuisine": "nord-américaine"
+  },
+  "Seitan poêlé au poivre et sauce crème au cognac": {
+   "dish_types": [
+    "rôti-grillé"
+   ],
+   "cuisine": "française"
+  },
+  "Seitan rôti aux légumes racines et moutarde": {
+   "dish_types": [
+    "rôti-grillé"
+   ],
+   "cuisine": "française"
+  },
+  "Seitan épicé grillé façon jerk et riz coco": {
+   "dish_types": [
+    "riz",
+    "rôti-grillé"
+   ],
+   "cuisine": "latino-américaine et caribéenne"
+  },
+  "Seitan épicé sauce aigre-douce et brocolis": {
+   "dish_types": [
+    "sauté"
+   ],
+   "cuisine": "chinoise"
+  },
+  "Shakshuka": {
+   "dish_types": [
+    "œufs"
+   ],
+   "cuisine": "maghrébine"
+  },
+  "Shakshuka aux poivrons et aux œufs pochés": {
+   "dish_types": [
+    "œufs"
+   ],
+   "cuisine": "maghrébine"
+  },
+  "Smoothie bowl fruits rouges": {
+   "dish_types": [],
+   "cuisine": null
+  },
+  "Socca niçoise garnie de pois chiches rôtis": {
+   "dish_types": [
+    "galette"
+   ],
+   "cuisine": "française"
+  },
+  "Soufflé au quinoa, épinards et gruyère": {
+   "dish_types": [
+    "gratin"
+   ],
+   "cuisine": "française"
+  },
+  "Soupe de haricots blancs": {
+   "dish_types": [
+    "soupe"
+   ],
+   "cuisine": null
+  },
+  "Soupe de haricots noirs au cumin et citron vert": {
+   "dish_types": [
+    "soupe"
+   ],
+   "cuisine": "mexicaine"
+  },
+  "Soupe de lentilles corail": {
+   "dish_types": [
+    "soupe"
+   ],
+   "cuisine": null
+  },
+  "Soupe de pois cassés à la coco fumée": {
+   "dish_types": [
+    "soupe"
+   ],
+   "cuisine": null
+  },
+  "Soupe de potiron": {
+   "dish_types": [
+    "soupe"
+   ],
+   "cuisine": "française"
+  },
+  "Soupe miso au tofu": {
+   "dish_types": [
+    "soupe"
+   ],
+   "cuisine": "japonaise"
+  },
+  "Soupe miso aux nouilles udon et tofu fumé": {
+   "dish_types": [
+    "nouilles",
+    "soupe"
+   ],
+   "cuisine": "japonaise"
+  },
+  "Soupe tom kha au tofu et champignons": {
+   "dish_types": [
+    "soupe"
+   ],
+   "cuisine": "asie du sud-est"
+  },
+  "Soupe à l'oignon gratinée": {
+   "dish_types": [
+    "soupe"
+   ],
+   "cuisine": "française"
+  },
+  "Soupe à l'oignon gratinée au comté": {
+   "dish_types": [
+    "soupe"
+   ],
+   "cuisine": "française"
+  },
+  "Spaghetti à la carbonara de tempeh fumé": {
+   "dish_types": [
+    "pâtes"
+   ],
+   "cuisine": "italienne"
+  },
+  "Spätzle à la crème de moutarde et tofu fumé": {
+   "dish_types": [
+    "pâtes"
+   ],
+   "cuisine": "europe centrale et de l'est"
+  },
+  "Stroganoff de champignons à la crème et paprika": {
+   "dish_types": [
+    "ragoût"
+   ],
+   "cuisine": "europe centrale et de l'est"
+  },
+  "Sundubu jjigae au tofu soyeux et gochujang": {
+   "dish_types": [
+    "ragoût",
+    "soupe"
+   ],
+   "cuisine": "coréenne"
+  },
+  "Tacos aux haricots noirs": {
+   "dish_types": [
+    "tacos"
+   ],
+   "cuisine": "mexicaine"
+  },
+  "Tacos de jacque effiloché à la sauce barbecue": {
+   "dish_types": [
+    "tacos"
+   ],
+   "cuisine": "mexicaine"
+  },
+  "Tajine de légumes aux pois chiches et abricots": {
+   "dish_types": [
+    "ragoût"
+   ],
+   "cuisine": "maghrébine"
+  },
+  "Tartare de carottes fumées à l'avocat et aneth": {
+   "dish_types": [
+    "salade"
+   ],
+   "cuisine": null
+  },
+  "Tarte au roquefort, poires et noix": {
+   "dish_types": [
+    "tarte"
+   ],
+   "cuisine": "française"
+  },
+  "Tarte aux légumes d'été": {
+   "dish_types": [
+    "tarte"
+   ],
+   "cuisine": "française"
+  },
+  "Tarte fine aux tomates marinées et au thym": {
+   "dish_types": [
+    "tarte"
+   ],
+   "cuisine": "française"
+  },
+  "Tarte flambée au tempeh fumé et oignons": {
+   "dish_types": [
+    "tarte"
+   ],
+   "cuisine": "française"
+  },
+  "Tartiflette végétarienne au tempeh fumé": {
+   "dish_types": [
+    "gratin"
+   ],
+   "cuisine": "française"
+  },
+  "Tartines gratinées aux pleurotes et au chèvre": {
+   "dish_types": [
+    "sandwich"
+   ],
+   "cuisine": "française"
+  },
+  "Tempeh laqué au sirop d'érable et graines de sésame": {
+   "dish_types": [
+    "sauté"
+   ],
+   "cuisine": null
+  },
+  "Tempura de tofu ferme et légumes": {
+   "dish_types": [
+    "pané-frit"
+   ],
+   "cuisine": "japonaise"
+  },
+  "Terrine de champignons hachés aux noisettes et cognac": {
+   "dish_types": [
+    "terrine"
+   ],
+   "cuisine": "française"
+  },
+  "Tian provençal au quinoa et courgettes": {
+   "dish_types": [
+    "gratin"
+   ],
+   "cuisine": "française"
+  },
+  "Tofu ferme aux trois tasses et basilic thaï": {
+   "dish_types": [
+    "sauté"
+   ],
+   "cuisine": "chinoise"
+  },
+  "Tofu grille aux herbes": {
+   "dish_types": [
+    "rôti-grillé"
+   ],
+   "cuisine": "française"
+  },
+  "Tofu sauté à la sauce soja et brocoli": {
+   "dish_types": [
+    "sauté"
+   ],
+   "cuisine": "chinoise"
+  },
+  "Tofu teriyaki": {
+   "dish_types": [
+    "sauté"
+   ],
+   "cuisine": "japonaise"
+  },
+  "Tortilla espagnole aux pommes de terre et poivrons verts": {
+   "dish_types": [
+    "œufs"
+   ],
+   "cuisine": "espagnole"
+  },
+  "Tourte au soja texturé et aux champignons": {
+   "dish_types": [
+    "tarte"
+   ],
+   "cuisine": "française"
+  },
+  "Velouté de haricots blancs au romarin et citron": {
+   "dish_types": [
+    "soupe"
+   ],
+   "cuisine": "française"
+  },
+  "Vol-au-vent aux coeurs de palmier et crème d'estragon": {
+   "dish_types": [
+    "chausson"
+   ],
+   "cuisine": "française"
+  },
+  "Wellington de champignons des bois aux épinards et noisettes": {
+   "dish_types": [
+    "chausson"
+   ],
+   "cuisine": "europe du nord"
+  },
+  "Welsh rarebit au tempeh fumé et bière brune": {
+   "dish_types": [
+    "sandwich"
+   ],
+   "cuisine": "europe du nord"
+  },
+  "Wok de légumes au tofu": {
+   "dish_types": [
+    "sauté"
+   ],
+   "cuisine": "chinoise"
+  },
+  "Wok de tofu aux brocolis et sauce soja": {
+   "dish_types": [
+    "sauté"
+   ],
+   "cuisine": "chinoise"
+  },
+  "Wrap houmous et légumes": {
+   "dish_types": [
+    "sandwich"
+   ],
+   "cuisine": "moyen-orientale"
+  },
+  "Wraps de carottes fumées au houmous et roquette": {
+   "dish_types": [
+    "sandwich"
+   ],
+   "cuisine": "moyen-orientale"
+  },
+  "Yakisoba aux pleurotes et légumes croquants": {
+   "dish_types": [
+    "nouilles"
+   ],
+   "cuisine": "japonaise"
+  },
+  "Œufs cocotte aux épinards et à la crème": {
+   "dish_types": [
+    "œufs"
+   ],
+   "cuisine": "française"
+  }
+ }
+}

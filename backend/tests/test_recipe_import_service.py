@@ -165,7 +165,7 @@ def test_export_recipes_to_csv_has_header_and_row_per_recipe(db_session: Session
     lines = exported.splitlines()
     assert lines[0] == (
         "title,ingredients,allergens,prep_time_minutes,servings,protein_source,"
-        "protein_grams,calories_per_portion,price_tier,instructions"
+        "protein_grams,calories_per_portion,price_tier,dish_types,cuisine,instructions"
     )
     assert len(lines) == 3  # header + two recipes
 
@@ -225,3 +225,39 @@ def test_export_escapes_commas_in_values(db_session: Session) -> None:
 
     assert '"Salade, verte"' in exported
     assert recipe_import_service.parse_csv(exported)[0]["title"] == "Salade, verte"
+
+
+def test_parse_csv_reads_dish_types_and_cuisine() -> None:
+    rows = recipe_import_service.parse_csv(
+        "title,ingredients,dish_types,cuisine\n"
+        "Lasagnes aux lentilles,lentilles; tomate,gratin; pâtes,italienne\n"
+        "Salade,laitue,,\n"
+    )
+
+    assert rows[0]["dish_types"] == ["gratin", "pâtes"]
+    assert rows[0]["cuisine"] == "italienne"
+    assert rows[1]["dish_types"] == []
+    assert rows[1]["cuisine"] is None
+
+
+def test_parse_csv_rejects_an_unknown_dish_type() -> None:
+    with pytest.raises(CsvImportError) as exc_info:
+        recipe_import_service.parse_csv(
+            "title,ingredients,dish_types\nSalade,laitue,plat mystère\n"
+        )
+
+    assert "plat mystère" in exc_info.value.errors[0].message
+
+
+def test_export_round_trips_dish_types_and_cuisine(db_session: Session) -> None:
+    recipe_import_service.import_recipes_from_csv(
+        db_session,
+        "title,ingredients,dish_types,cuisine\nCurry,lentilles,curry; soupe,indienne\n",
+    )
+
+    reparsed = recipe_import_service.parse_csv(
+        recipe_import_service.export_recipes_to_csv(db_session)
+    )
+
+    assert reparsed[0]["dish_types"] == ["curry", "soupe"]
+    assert reparsed[0]["cuisine"] == "indienne"

@@ -56,6 +56,13 @@ class RecipeResponse(BaseModel):
     protein_density: float | None  # grams of protein per 100 kcal, computed
     instructions: list[str]
     image_url: str | None
+    dish_types: list[str]
+    cuisine: str | None
+
+
+class DishStructureOptions(BaseModel):
+    dish_types: list[str]
+    cuisines: list[str]
 
 
 class RecipeListItem(BaseModel):

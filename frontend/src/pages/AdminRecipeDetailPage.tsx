@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import {
   deleteRecipe,
+  getDishStructureOptions,
   getProteinSourceOptions,
   getRecipe,
   updateRecipe,
@@ -14,7 +15,7 @@ import { Header } from "../components/Header";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { useSession } from "../hooks/useSession";
-import type { RecipeDetail, RecipeFormValues } from "../types/recipe";
+import type { DishStructureOptions, RecipeDetail, RecipeFormValues } from "../types/recipe";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -29,6 +30,8 @@ function toFormValues(recipe: RecipeDetail): RecipeFormValues {
     proteinGrams: recipe.protein_grams,
     caloriesPerPortion: recipe.calories_per_portion,
     priceTier: recipe.price_tier,
+    dishTypes: recipe.dish_types,
+    cuisine: recipe.cuisine,
     instructions: recipe.instructions,
     image: null,
   };
@@ -40,6 +43,10 @@ function AdminRecipeDetailPage() {
   const { user: admin, isChecking: isCheckingSession } = useSession({ requireAdmin: true });
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
   const [proteinSourceOptions, setProteinSourceOptions] = useState<string[]>([]);
+  const [dishStructureOptions, setDishStructureOptions] = useState<DishStructureOptions>({
+    dish_types: [],
+    cuisines: [],
+  });
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -65,6 +72,10 @@ function AdminRecipeDetailPage() {
     getProteinSourceOptions()
       .then(setProteinSourceOptions)
       .catch(() => setProteinSourceOptions([]));
+    // On failure the form keeps showing (and saving) a recipe's current tags.
+    getDishStructureOptions()
+      .then(setDishStructureOptions)
+      .catch(() => setDishStructureOptions({ dish_types: [], cuisines: [] }));
   }, [admin]);
 
   async function handleSubmit(values: RecipeFormValues, removeExistingImage: boolean) {
@@ -140,6 +151,7 @@ function AdminRecipeDetailPage() {
                 initialValues={toFormValues(recipe)}
                 existingImageUrl={recipe.image_url ? `${API_BASE_URL}${recipe.image_url}` : null}
                 proteinSourceOptions={proteinSourceOptions}
+                dishStructureOptions={dishStructureOptions}
                 onSubmit={handleSubmit}
                 isLoading={isSaving}
                 submitLabel="Enregistrer la recette"

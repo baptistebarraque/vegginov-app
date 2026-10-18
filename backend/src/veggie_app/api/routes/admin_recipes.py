@@ -19,6 +19,7 @@ from veggie_app.models.user import User
 from veggie_app.schemas.recipe import (
     CsvImportResponse,
     CsvImportRowError,
+    DishStructureOptions,
     IngredientEntrySchema,
     RecipeListItem,
     RecipeResponse,
@@ -27,6 +28,7 @@ from veggie_app.services import auth_service, image_service, recipe_import_servi
 from veggie_app.services.image_service import InvalidImageError
 from veggie_app.services.recipe_import_service import CsvImportError
 from veggie_app.services.recipe_service import (
+    DishStructureError,
     IngredientQuantityError,
     PriceTierError,
     ProteinSourceError,
@@ -69,6 +71,8 @@ def _to_response(recipe: Recipe) -> RecipeResponse:
         ),
         instructions=recipe.instructions,
         image_url=image_service.image_url(recipe.image_filename),
+        dish_types=recipe.dish_types,
+        cuisine=recipe.cuisine,
     )
 
 
@@ -77,6 +81,14 @@ def list_protein_source_options(
     _admin: User = Depends(auth_service.require_admin),
 ) -> list[str]:
     return recipe_service.list_protein_source_options()
+
+
+@router.get("/dish-structure-options", response_model=DishStructureOptions)
+def list_dish_structure_options(
+    _admin: User = Depends(auth_service.require_admin),
+) -> DishStructureOptions:
+    dish_types, cuisines = recipe_service.list_dish_structure_options()
+    return DishStructureOptions(dish_types=dish_types, cuisines=cuisines)
 
 
 @router.get("/recipes", response_model=list[RecipeListItem])
@@ -131,6 +143,8 @@ def create_recipe(
     calories_per_portion: float | None = Form(None),
     price_tier: int | None = Form(None),
     instructions: list[str] = Form([]),
+    dish_types: list[str] = Form([]),
+    cuisine: str | None = Form(None),
     image: UploadFile | None = File(None),
     db: Session = Depends(get_db),
     _admin: User = Depends(auth_service.require_admin),
@@ -158,8 +172,16 @@ def create_recipe(
             price_tier=price_tier,
             instructions=instructions,
             image_filename=image_filename,
+            dish_types=dish_types,
+            # An unselected <select> posts "" — that means "no cuisine".
+            cuisine=cuisine or None,
         )
-    except (IngredientQuantityError, ProteinSourceError, PriceTierError) as exc:
+    except (
+        IngredientQuantityError,
+        ProteinSourceError,
+        PriceTierError,
+        DishStructureError,
+    ) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     db.commit()
@@ -179,6 +201,8 @@ def update_recipe(
     calories_per_portion: float | None = Form(None),
     price_tier: int | None = Form(None),
     instructions: list[str] = Form([]),
+    dish_types: list[str] = Form([]),
+    cuisine: str | None = Form(None),
     image: UploadFile | None = File(None),
     remove_image: bool = Form(False),
     db: Session = Depends(get_db),
@@ -214,8 +238,16 @@ def update_recipe(
             price_tier=price_tier,
             instructions=instructions,
             image_filename=image_filename,
+            dish_types=dish_types,
+            # An unselected <select> posts "" — that means "no cuisine".
+            cuisine=cuisine or None,
         )
-    except (IngredientQuantityError, ProteinSourceError, PriceTierError) as exc:
+    except (
+        IngredientQuantityError,
+        ProteinSourceError,
+        PriceTierError,
+        DishStructureError,
+    ) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     db.commit()

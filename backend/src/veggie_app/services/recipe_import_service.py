@@ -32,6 +32,8 @@ EXPORT_COLUMNS = [
     "protein_grams",
     "calories_per_portion",
     "price_tier",
+    "dish_types",
+    "cuisine",
     "instructions",
 ]
 
@@ -110,6 +112,10 @@ def _parse_row(row: dict[str, str | None]) -> dict:
     price_tier = _parse_optional_int(row.get("price_tier"), "price_tier")
     recipe_service.validate_price_tier(price_tier)
 
+    dish_types = _split_list(row.get("dish_types"))
+    cuisine = (row.get("cuisine") or "").strip() or None
+    recipe_service.validate_dish_structure(dish_types, cuisine)
+
     return {
         "title": title,
         "ingredients": ingredients,
@@ -122,6 +128,8 @@ def _parse_row(row: dict[str, str | None]) -> dict:
             row.get("calories_per_portion"), "calories_per_portion"
         ),
         "price_tier": price_tier,
+        "dish_types": dish_types,
+        "cuisine": cuisine,
         "instructions": _split_list(row.get("instructions")),
     }
 
@@ -195,6 +203,8 @@ def _recipe_to_row(recipe: Recipe) -> dict[str, str]:
         "protein_grams": _format_number(recipe.protein_grams),
         "calories_per_portion": _format_number(recipe.calories_per_portion),
         "price_tier": _format_number(recipe.price_tier),
+        "dish_types": _LIST_JOINER.join(recipe.dish_types),
+        "cuisine": recipe.cuisine or "",
         "instructions": _LIST_JOINER.join(recipe.instructions),
     }
 

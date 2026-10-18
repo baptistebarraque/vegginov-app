@@ -3,6 +3,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from veggie_app.matching.dish_structure import CUISINES, DISH_TYPES, infer_dish_structure
 from veggie_app.matching.embeddings import embed_text
 from veggie_app.matching.fusion import CandidateRecipe, rank_candidates
 from veggie_app.matching.ingredient_similarity import compute_ingredient_weights
@@ -28,6 +29,10 @@ class ProteinSourceError(ValueError):
 
 class PriceTierError(ValueError):
     """Raised when price_tier is outside the 1..MAX_PRICE_TIER range."""
+
+
+class DishStructureError(ValueError):
+    """Raised when a dish type or the cuisine isn't in its closed vocabulary."""
 
 
 def validate_ingredient_quantities(
@@ -69,6 +74,22 @@ def validate_price_tier(price_tier: int | None) -> None:
         )
 
 
+def validate_dish_structure(dish_types: list[str], cuisine: str | None) -> None:
+    """dish_types/cuisine are constrained to the vocabularies of
+    matching/dish_structure.py, since the structure view compares them by
+    exact value."""
+    unknown = [dish_type for dish_type in dish_types if dish_type not in DISH_TYPES]
+    if unknown:
+        raise DishStructureError(
+            f"type(s) de plat inconnu(s) : {', '.join(unknown)} "
+            f"(valeurs autorisées : {', '.join(DISH_TYPES)})"
+        )
+    if cuisine is not None and cuisine not in CUISINES:
+        raise DishStructureError(
+            f"cuisine inconnue : {cuisine!r} (valeurs autorisées : {', '.join(CUISINES)})"
+        )
+
+
 def compute_protein_density(
     protein_grams: float | None, calories_per_portion: float | None
 ) -> float | None:
@@ -83,6 +104,16 @@ def compute_protein_density(
 
 def list_protein_source_options() -> list[str]:
     return list(RECIPE_PROTEIN_VOCABULARY)
+
+
+def list_dish_structure_options() -> tuple[list[str], list[str]]:
+    """(dish types, cuisines) an admin can tag a recipe with."""
+    return list(DISH_TYPES), list(CUISINES)
+
+
+def _normalize_dish_types(dish_types: list[str] | None) -> list[str]:
+    """Drops blanks and duplicates, keeping the order given."""
+    return list(dict.fromkeys(dish_type for dish_type in dish_types or [] if dish_type))
 
 
 def _prepare_embedding(
@@ -116,7 +147,11 @@ def create_recipe(
     price_tier: int | None = None,
     instructions: list[str] | None = None,
     image_filename: str | None = None,
+    dish_types: list[str] | None = None,
+    cuisine: str | None = None,
 ) -> Recipe:
+    dish_types = _normalize_dish_types(dish_types)
+    validate_dish_structure(dish_types, cuisine)
     embedding = _prepare_embedding(title, ingredients, servings, protein_source, price_tier)
     recipe = Recipe(
         title=title,
@@ -130,6 +165,8 @@ def create_recipe(
         price_tier=price_tier,
         instructions=instructions or [],
         image_filename=image_filename,
+        dish_types=dish_types,
+        cuisine=cuisine,
         embedding=embedding,
     )
     db.add(recipe)
@@ -159,7 +196,11 @@ def update_recipe(
     price_tier: int | None = None,
     instructions: list[str] | None = None,
     image_filename: str | None = None,
+    dish_types: list[str] | None = None,
+    cuisine: str | None = None,
 ) -> Recipe:
+    dish_types = _normalize_dish_types(dish_types)
+    validate_dish_structure(dish_types, cuisine)
     embedding = _prepare_embedding(title, ingredients, servings, protein_source, price_tier)
     recipe.title = title
     recipe.ingredients = ingredients
@@ -172,6 +213,8 @@ def update_recipe(
     recipe.price_tier = price_tier
     recipe.instructions = instructions or []
     recipe.image_filename = image_filename
+    recipe.dish_types = dish_types
+    recipe.cuisine = cuisine
     recipe.embedding = embedding
     db.flush()
     return recipe
@@ -192,6 +235,8 @@ def build_candidate(recipe: Recipe) -> CandidateRecipe:
         ingredient_names=[ingredient["name"] for ingredient in recipe.ingredients],
         protein_source=recipe.protein_source,
         calories_per_portion=recipe.calories_per_portion,
+        dish_types=recipe.dish_types,
+        cuisine=recipe.cuisine,
     )
 
 
@@ -239,6 +284,7 @@ def get_suggestions(
         top_k=SUGGESTION_COUNT,
         calorie_orientation=calorie_orientation,
         ingredient_weights=ingredient_weights,
+        query_structure=infer_dish_structure(title),
     )
 
     recipes_by_id = {recipe.id: recipe for recipe in recipes}
