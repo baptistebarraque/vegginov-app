@@ -1,0 +1,1150 @@
+{
+  "_doc": [
+    "Judged queries for scripts/evaluate_similarity.py. Each query is a non-vegetarian dish typed the way a user would type it into the search form (natural French: accents, plurals, cuts like 'blanc de poulet').",
+    "relevant maps an exact recipe title from the database to a grade: 2 = the vegetarian version of this dish (same dish form), 1 = a suggestion the user would be happy with (same family, technique or flavours). Any recipe not listed counts as not relevant.",
+    "tags group queries in the report: the meat/fish family of the query, plus 'titre-seul' for queries without ingredients (the form allows it).",
+    "First draft written 2026-10-15 against all 218 recipes in the dev database (the 160 curated ones and the 58 older ones); review the grades rather than trusting them blindly."
+  ],
+  "queries": [
+    {
+      "id": "boeuf-bourguignon",
+      "title": "Bœuf bourguignon",
+      "ingredients": [
+        "bœuf",
+        "vin rouge",
+        "lardons",
+        "carottes",
+        "oignons",
+        "champignons de Paris"
+      ],
+      "tags": [
+        "boeuf"
+      ],
+      "relevant": {
+        "Bourguignon de seitan aux carottes et vin rouge": 2,
+        "Carbonnade de jacque à la bière brune et oignons": 1,
+        "Pot-au-feu végétarien au seitan et légumes d'hiver": 1,
+        "Goulasch de protéines de soja texturées au paprika": 1,
+        "Tourte au soja texturé et aux champignons": 1,
+        "Blanquette de seitan aux champignons": 1,
+        "Stroganoff de champignons à la crème et paprika": 1
+      }
+    },
+    {
+      "id": "boeuf-bourguignon-titre",
+      "title": "Bœuf bourguignon",
+      "ingredients": [],
+      "tags": [
+        "boeuf",
+        "titre-seul"
+      ],
+      "relevant": {
+        "Bourguignon de seitan aux carottes et vin rouge": 2,
+        "Carbonnade de jacque à la bière brune et oignons": 1,
+        "Pot-au-feu végétarien au seitan et légumes d'hiver": 1,
+        "Goulasch de protéines de soja texturées au paprika": 1,
+        "Tourte au soja texturé et aux champignons": 1,
+        "Blanquette de seitan aux champignons": 1,
+        "Stroganoff de champignons à la crème et paprika": 1
+      }
+    },
+    {
+      "id": "pot-au-feu",
+      "title": "Pot-au-feu",
+      "ingredients": [
+        "paleron de bœuf",
+        "carottes",
+        "poireaux",
+        "navets",
+        "pommes de terre",
+        "os à moelle",
+        "bouquet garni"
+      ],
+      "tags": [
+        "boeuf"
+      ],
+      "relevant": {
+        "Pot-au-feu végétarien au seitan et légumes d'hiver": 2,
+        "Bourguignon de seitan aux carottes et vin rouge": 1,
+        "Blanquette de seitan aux champignons": 1,
+        "Seitan rôti aux légumes racines et moutarde": 1
+      }
+    },
+    {
+      "id": "hachis-parmentier",
+      "title": "Hachis parmentier",
+      "ingredients": [
+        "bœuf haché",
+        "pommes de terre",
+        "oignon",
+        "lait",
+        "beurre",
+        "gruyère râpé"
+      ],
+      "tags": [
+        "boeuf"
+      ],
+      "relevant": {
+        "Hachis parmentier au seitan haché": 2,
+        "Parmentier de lentilles à la patate douce": 2,
+        "Moussaka végétarienne aux lentilles corail": 1,
+        "Lasagnes aux lentilles et à la béchamel": 1
+      }
+    },
+    {
+      "id": "hachis-parmentier-titre",
+      "title": "Hachis parmentier",
+      "ingredients": [],
+      "tags": [
+        "boeuf",
+        "titre-seul"
+      ],
+      "relevant": {
+        "Hachis parmentier au seitan haché": 2,
+        "Parmentier de lentilles à la patate douce": 2,
+        "Moussaka végétarienne aux lentilles corail": 1,
+        "Lasagnes aux lentilles et à la béchamel": 1
+      }
+    },
+    {
+      "id": "spaghetti-bolognaise",
+      "title": "Spaghetti bolognaise",
+      "ingredients": [
+        "spaghetti",
+        "viande hachée",
+        "tomates",
+        "oignon",
+        "carotte",
+        "céleri",
+        "vin rouge"
+      ],
+      "tags": [
+        "boeuf"
+      ],
+      "relevant": {
+        "Bolognaise de soja texturé aux tomates et basilic": 2,
+        "Lasagnes aux lentilles et à la béchamel": 1,
+        "Boulettes de champignons hachés à la sauce tomate": 1,
+        "Pâtes alla norma aux aubergines et ricotta": 1,
+        "Pâtes à la tomate et mozzarella": 1,
+        "Lasagnes aux légumes": 1
+      }
+    },
+    {
+      "id": "lasagnes-bolognaise",
+      "title": "Lasagnes à la bolognaise",
+      "ingredients": [
+        "viande hachée",
+        "tomates",
+        "pâtes à lasagne",
+        "béchamel",
+        "parmesan"
+      ],
+      "tags": [
+        "boeuf"
+      ],
+      "relevant": {
+        "Lasagnes aux lentilles et à la béchamel": 2,
+        "Bolognaise de soja texturé aux tomates et basilic": 2,
+        "Moussaka végétarienne aux lentilles corail": 1,
+        "Gratin d'aubergines à la tomate et mozzarella": 1,
+        "Pâtes alla norma aux aubergines et ricotta": 1,
+        "Lasagnes aux légumes": 2
+      }
+    },
+    {
+      "id": "chili-con-carne",
+      "title": "Chili con carne",
+      "ingredients": [
+        "bœuf haché",
+        "haricots rouges",
+        "tomates",
+        "poivrons",
+        "oignon",
+        "cumin",
+        "piment"
+      ],
+      "tags": [
+        "boeuf"
+      ],
+      "relevant": {
+        "Chili de haricots rouges au maïs et poivrons": 2,
+        "Chili épicé au seitan et aux haricots noirs": 2,
+        "Picadillo cubain au seitan haché et olives vertes": 1,
+        "Feijoada végétarienne aux haricots rouges": 1,
+        "Burrito bowl aux haricots rouges et riz complet": 1,
+        "Enchiladas aux haricots noirs et sauce tomate épicée": 1,
+        "Riz créole aux haricots rouges épicés": 1,
+        "Goulasch de protéines de soja texturées au paprika": 1,
+        "Chili sin carne": 2,
+        "Chili de haricots rouges épicé": 2,
+        "Tacos aux haricots noirs": 1
+      }
+    },
+    {
+      "id": "chili-con-carne-titre",
+      "title": "Chili con carne",
+      "ingredients": [],
+      "tags": [
+        "boeuf",
+        "titre-seul"
+      ],
+      "relevant": {
+        "Chili de haricots rouges au maïs et poivrons": 2,
+        "Chili épicé au seitan et aux haricots noirs": 2,
+        "Picadillo cubain au seitan haché et olives vertes": 1,
+        "Feijoada végétarienne aux haricots rouges": 1,
+        "Burrito bowl aux haricots rouges et riz complet": 1,
+        "Enchiladas aux haricots noirs et sauce tomate épicée": 1,
+        "Riz créole aux haricots rouges épicés": 1,
+        "Goulasch de protéines de soja texturées au paprika": 1,
+        "Chili sin carne": 2,
+        "Chili de haricots rouges épicé": 2,
+        "Tacos aux haricots noirs": 1
+      }
+    },
+    {
+      "id": "tacos-boeuf",
+      "title": "Tacos au bœuf",
+      "ingredients": [
+        "bœuf",
+        "tortillas de maïs",
+        "oignon rouge",
+        "coriandre",
+        "citron vert",
+        "avocat"
+      ],
+      "tags": [
+        "boeuf"
+      ],
+      "relevant": {
+        "Tacos de jacque effiloché à la sauce barbecue": 2,
+        "Enchiladas aux haricots noirs et sauce tomate épicée": 1,
+        "Quesadillas aux haricots rouges et cheddar": 1,
+        "Burrito bowl aux haricots rouges et riz complet": 1,
+        "Arepas garnies au jacque effiloché et avocat": 1,
+        "Empanadas aux haricots noirs et maïs": 1,
+        "Tacos aux haricots noirs": 2,
+        "Empanadas végétariennes": 1
+      }
+    },
+    {
+      "id": "steak-au-poivre",
+      "title": "Steak au poivre",
+      "ingredients": [
+        "steak de bœuf",
+        "poivre en grains",
+        "cognac",
+        "crème",
+        "échalote",
+        "beurre"
+      ],
+      "tags": [
+        "boeuf"
+      ],
+      "relevant": {
+        "Seitan poêlé au poivre et sauce crème au cognac": 2,
+        "Stroganoff de champignons à la crème et paprika": 1,
+        "Poêlée de pleurotes à la crème et au vin blanc": 1
+      }
+    },
+    {
+      "id": "boeuf-wellington",
+      "title": "Bœuf Wellington",
+      "ingredients": [
+        "filet de bœuf",
+        "pâte feuilletée",
+        "champignons",
+        "jambon cru",
+        "moutarde",
+        "œuf"
+      ],
+      "tags": [
+        "boeuf"
+      ],
+      "relevant": {
+        "Wellington de champignons des bois aux épinards et noisettes": 2,
+        "Tourte au soja texturé et aux champignons": 1,
+        "Terrine de champignons hachés aux noisettes et cognac": 1,
+        "Vol-au-vent aux coeurs de palmier et crème d'estragon": 1
+      }
+    },
+    {
+      "id": "boeuf-stroganoff",
+      "title": "Bœuf Stroganoff",
+      "ingredients": [
+        "bœuf",
+        "champignons",
+        "oignon",
+        "crème aigre",
+        "paprika",
+        "moutarde"
+      ],
+      "tags": [
+        "boeuf"
+      ],
+      "relevant": {
+        "Stroganoff de champignons à la crème et paprika": 2,
+        "Goulasch de protéines de soja texturées au paprika": 1,
+        "Seitan poêlé au poivre et sauce crème au cognac": 1,
+        "Poêlée de pleurotes à la crème et au vin blanc": 1
+      }
+    },
+    {
+      "id": "goulash",
+      "title": "Goulash hongrois",
+      "ingredients": [
+        "bœuf",
+        "paprika",
+        "oignons",
+        "poivrons",
+        "pommes de terre",
+        "carvi"
+      ],
+      "tags": [
+        "boeuf"
+      ],
+      "relevant": {
+        "Goulasch de protéines de soja texturées au paprika": 2,
+        "Bourguignon de seitan aux carottes et vin rouge": 1,
+        "Stroganoff de champignons à la crème et paprika": 1,
+        "Carbonnade de jacque à la bière brune et oignons": 1
+      }
+    },
+    {
+      "id": "carbonade-flamande",
+      "title": "Carbonade flamande",
+      "ingredients": [
+        "joue de bœuf",
+        "bière brune",
+        "oignons",
+        "pain d'épices",
+        "moutarde",
+        "cassonade"
+      ],
+      "tags": [
+        "boeuf"
+      ],
+      "relevant": {
+        "Carbonnade de jacque à la bière brune et oignons": 2,
+        "Bourguignon de seitan aux carottes et vin rouge": 1,
+        "Goulasch de protéines de soja texturées au paprika": 1
+      }
+    },
+    {
+      "id": "pho-boeuf",
+      "title": "Pho au bœuf",
+      "ingredients": [
+        "bœuf",
+        "nouilles de riz",
+        "oignon",
+        "gingembre",
+        "badiane",
+        "cannelle",
+        "coriandre"
+      ],
+      "tags": [
+        "boeuf"
+      ],
+      "relevant": {
+        "Pho aux shiitakés séchés et nouilles de riz": 2,
+        "Ramen aux shiitakés séchés et miso": 1,
+        "Soupe miso aux nouilles udon et tofu fumé": 1,
+        "Soupe tom kha au tofu et champignons": 1
+      }
+    },
+    {
+      "id": "bibimbap-boeuf",
+      "title": "Bibimbap au bœuf",
+      "ingredients": [
+        "bœuf",
+        "riz",
+        "épinards",
+        "carotte",
+        "pousses de soja",
+        "œuf",
+        "gochujang"
+      ],
+      "tags": [
+        "boeuf"
+      ],
+      "relevant": {
+        "Bibimbap au tofu émietté et légumes croquants": 2,
+        "Poke bowl au tofu fumé et edamame": 1,
+        "Riz sauté au tofu fumé et petits pois": 1,
+        "Nasi goreng au soja texturé et légumes": 1,
+        "Riz sauté aux légumes et œufs": 1,
+        "Buddha bowl quinoa et légumes rôtis": 1
+      }
+    },
+    {
+      "id": "blanquette-veau",
+      "title": "Blanquette de veau",
+      "ingredients": [
+        "veau",
+        "carottes",
+        "champignons de Paris",
+        "crème fraîche",
+        "citron",
+        "poireau",
+        "riz"
+      ],
+      "tags": [
+        "veau"
+      ],
+      "relevant": {
+        "Blanquette de seitan aux champignons": 2,
+        "Fricassée de coeurs de palmier au citron et câpres": 1,
+        "Vol-au-vent aux coeurs de palmier et crème d'estragon": 1,
+        "Pot-au-feu végétarien au seitan et légumes d'hiver": 1,
+        "Bourguignon de seitan aux carottes et vin rouge": 1,
+        "Poêlée de pleurotes à la crème et au vin blanc": 1
+      }
+    },
+    {
+      "id": "kebab",
+      "title": "Kebab sauce blanche",
+      "ingredients": [
+        "émincé de veau",
+        "pain pita",
+        "yaourt",
+        "chou rouge",
+        "tomate",
+        "oignon"
+      ],
+      "tags": [
+        "veau"
+      ],
+      "relevant": {
+        "Kebab de seitan épicé en pain pita": 2,
+        "Falafels de pois chiches écrasés et sauce tahini": 1,
+        "Fatteh de pois chiches au yaourt et pain grillé": 1,
+        "Keftas de seitan haché aux épices et boulgour": 1,
+        "Falafels et sauce au yaourt": 1,
+        "Wrap houmous et légumes": 1
+      }
+    },
+    {
+      "id": "moussaka",
+      "title": "Moussaka",
+      "ingredients": [
+        "agneau haché",
+        "aubergines",
+        "tomates",
+        "oignon",
+        "cannelle",
+        "béchamel"
+      ],
+      "tags": [
+        "agneau"
+      ],
+      "relevant": {
+        "Moussaka végétarienne aux lentilles corail": 2,
+        "Gratin d'aubergines à la tomate et mozzarella": 1,
+        "Lasagnes aux lentilles et à la béchamel": 1,
+        "Hachis parmentier au seitan haché": 1,
+        "Lasagnes aux légumes": 1
+      }
+    },
+    {
+      "id": "tajine-agneau",
+      "title": "Tajine d'agneau aux pruneaux",
+      "ingredients": [
+        "épaule d'agneau",
+        "pruneaux",
+        "oignons",
+        "cannelle",
+        "ras el hanout",
+        "amandes"
+      ],
+      "tags": [
+        "agneau"
+      ],
+      "relevant": {
+        "Tajine de légumes aux pois chiches et abricots": 2,
+        "Couscous végétarien aux sept légumes": 1,
+        "Pastilla végétarienne au seitan haché et amandes": 1,
+        "Harira aux lentilles, pois chiches et coriandre": 1,
+        "Keftas de seitan haché aux épices et boulgour": 1
+      }
+    },
+    {
+      "id": "couscous-royal",
+      "title": "Couscous royal",
+      "ingredients": [
+        "merguez",
+        "poulet",
+        "agneau",
+        "semoule",
+        "carottes",
+        "courgettes",
+        "navets",
+        "pois chiches"
+      ],
+      "tags": [
+        "mixte"
+      ],
+      "relevant": {
+        "Couscous végétarien aux sept légumes": 2,
+        "Tajine de légumes aux pois chiches et abricots": 1,
+        "Harira aux lentilles, pois chiches et coriandre": 1,
+        "Keftas de seitan haché aux épices et boulgour": 1
+      }
+    },
+    {
+      "id": "keftas-agneau",
+      "title": "Keftas d'agneau grillées",
+      "ingredients": [
+        "agneau haché",
+        "oignon",
+        "persil",
+        "coriandre",
+        "cumin",
+        "paprika"
+      ],
+      "tags": [
+        "agneau"
+      ],
+      "relevant": {
+        "Keftas de seitan haché aux épices et boulgour": 2,
+        "Falafels de pois chiches écrasés et sauce tahini": 1,
+        "Kebab de seitan épicé en pain pita": 1,
+        "Brochettes de tempeh mariné aux légumes grillés": 1,
+        "Falafels et sauce au yaourt": 1,
+        "Galettes de pois chiches": 1
+      }
+    },
+    {
+      "id": "poulet-curry",
+      "title": "Poulet au curry",
+      "ingredients": [
+        "blanc de poulet",
+        "lait de coco",
+        "curry en poudre",
+        "oignon",
+        "ail",
+        "gingembre",
+        "riz basmati"
+      ],
+      "tags": [
+        "poulet"
+      ],
+      "relevant": {
+        "Curry de jacque au lait de coco et épinards": 2,
+        "Curry thaï au tofu, aubergines et citronnelle": 2,
+        "Curry de chou-fleur aux lentilles corail": 1,
+        "Dahl de lentilles corail au lait de coco": 1,
+        "Chana masala aux pois chiches et tomates": 1,
+        "Curry japonais au seitan épicé et pommes de terre": 1,
+        "Rendang de tempeh au lait de coco": 1,
+        "Curry vert thaï végétarien": 2,
+        "Curry de pois chiches": 1,
+        "Curry de patate douce et pois chiches": 1,
+        "Curry de légumes au lait de coco": 1,
+        "Curry de lentilles corail": 1,
+        "Curry d'aubergines aux pois chiches et lait de coco": 1,
+        "Curry de chou-fleur (façon aloo gobi)": 1,
+        "Dal de lentilles et épinards": 1
+      }
+    },
+    {
+      "id": "poulet-curry-titre",
+      "title": "Poulet au curry",
+      "ingredients": [],
+      "tags": [
+        "poulet",
+        "titre-seul"
+      ],
+      "relevant": {
+        "Curry de jacque au lait de coco et épinards": 2,
+        "Curry thaï au tofu, aubergines et citronnelle": 2,
+        "Curry de chou-fleur aux lentilles corail": 1,
+        "Dahl de lentilles corail au lait de coco": 1,
+        "Chana masala aux pois chiches et tomates": 1,
+        "Curry japonais au seitan épicé et pommes de terre": 1,
+        "Rendang de tempeh au lait de coco": 1,
+        "Curry vert thaï végétarien": 2,
+        "Curry de pois chiches": 1,
+        "Curry de patate douce et pois chiches": 1,
+        "Curry de légumes au lait de coco": 1,
+        "Curry de lentilles corail": 1,
+        "Curry d'aubergines aux pois chiches et lait de coco": 1,
+        "Curry de chou-fleur (façon aloo gobi)": 1,
+        "Dal de lentilles et épinards": 1
+      }
+    },
+    {
+      "id": "poulet-tikka-masala",
+      "title": "Poulet tikka masala",
+      "ingredients": [
+        "cuisses de poulet",
+        "yaourt",
+        "tomates concassées",
+        "garam masala",
+        "crème",
+        "riz basmati"
+      ],
+      "tags": [
+        "poulet"
+      ],
+      "relevant": {
+        "Chana masala aux pois chiches et tomates": 2,
+        "Rajma masala aux haricots rouges épicés et riz basmati": 1,
+        "Curry de jacque au lait de coco et épinards": 1,
+        "Curry de chou-fleur aux lentilles corail": 1,
+        "Baingan bharta d'aubergines grillées aux épices indiennes": 1,
+        "Dahl de lentilles corail au lait de coco": 1,
+        "Curry de pois chiches": 1,
+        "Curry de chou-fleur (façon aloo gobi)": 1,
+        "Curry d'aubergines aux pois chiches et lait de coco": 1,
+        "Curry de patate douce et pois chiches": 1
+      }
+    },
+    {
+      "id": "poulet-basquaise",
+      "title": "Poulet basquaise",
+      "ingredients": [
+        "poulet",
+        "poivrons",
+        "tomates",
+        "oignons",
+        "piment d'Espelette",
+        "vin blanc"
+      ],
+      "tags": [
+        "poulet"
+      ],
+      "relevant": {
+        "Shakshuka aux poivrons et aux œufs pochés": 1,
+        "Ratatouille provençale au thym": 1,
+        "Goulasch de protéines de soja texturées au paprika": 1,
+        "Moqueca de haricots noirs au lait de coco": 1,
+        "Ratatouille": 1,
+        "Shakshuka": 1
+      }
+    },
+    {
+      "id": "poulet-roti",
+      "title": "Poulet rôti aux légumes",
+      "ingredients": [
+        "cuisses de poulet",
+        "pommes de terre",
+        "carottes",
+        "oignons",
+        "thym",
+        "ail"
+      ],
+      "tags": [
+        "poulet"
+      ],
+      "relevant": {
+        "Seitan rôti aux légumes racines et moutarde": 2,
+        "Pot-au-feu végétarien au seitan et légumes d'hiver": 1,
+        "Brochettes de tempeh mariné aux légumes grillés": 1,
+        "Crumble salé de légumes racines à la coco fumée": 1
+      }
+    },
+    {
+      "id": "poulet-frit",
+      "title": "Poulet frit",
+      "ingredients": [
+        "poulet",
+        "babeurre",
+        "farine",
+        "paprika",
+        "ail en poudre",
+        "huile de friture"
+      ],
+      "tags": [
+        "poulet"
+      ],
+      "relevant": {
+        "Pleurotes croustillants panés au babeurre et paprika fumé": 2,
+        "Katsu de tofu ferme pané et riz": 1,
+        "Tempura de tofu ferme et légumes": 1,
+        "Croquettes de coeurs de palmier et sauce tartare": 1
+      }
+    },
+    {
+      "id": "tonkatsu",
+      "title": "Tonkatsu de porc",
+      "ingredients": [
+        "côtelettes de porc",
+        "chapelure panko",
+        "œuf",
+        "farine",
+        "chou",
+        "riz"
+      ],
+      "tags": [
+        "porc"
+      ],
+      "relevant": {
+        "Katsu de tofu ferme pané et riz": 2,
+        "Tempura de tofu ferme et légumes": 1,
+        "Pleurotes croustillants panés au babeurre et paprika fumé": 1,
+        "Curry japonais au seitan épicé et pommes de terre": 1
+      }
+    },
+    {
+      "id": "porc-caramel",
+      "title": "Porc au caramel",
+      "ingredients": [
+        "échine de porc",
+        "nuoc-mâm",
+        "sucre",
+        "échalotes",
+        "ail",
+        "riz"
+      ],
+      "tags": [
+        "porc"
+      ],
+      "relevant": {
+        "Tempeh laqué au sirop d'érable et graines de sésame": 1,
+        "Seitan épicé sauce aigre-douce et brocolis": 1,
+        "Tofu ferme aux trois tasses et basilic thaï": 1,
+        "Tofu teriyaki": 1
+      }
+    },
+    {
+      "id": "porc-aigre-doux",
+      "title": "Porc aigre-doux",
+      "ingredients": [
+        "porc",
+        "ananas",
+        "poivrons",
+        "vinaigre",
+        "ketchup",
+        "sucre"
+      ],
+      "tags": [
+        "porc"
+      ],
+      "relevant": {
+        "Seitan épicé sauce aigre-douce et brocolis": 2,
+        "Tempeh laqué au sirop d'érable et graines de sésame": 1,
+        "Wok de tofu aux brocolis et sauce soja": 1,
+        "Tofu teriyaki": 1,
+        "Tofu sauté à la sauce soja et brocoli": 1,
+        "Wok de légumes au tofu": 1
+      }
+    },
+    {
+      "id": "pulled-pork-burger",
+      "title": "Burger de porc effiloché sauce barbecue",
+      "ingredients": [
+        "épaule de porc",
+        "sauce barbecue",
+        "pains à burger",
+        "chou rouge",
+        "carotte"
+      ],
+      "tags": [
+        "porc"
+      ],
+      "relevant": {
+        "Tacos de jacque effiloché à la sauce barbecue": 2,
+        "Burger de tempeh grillé au chou rouge": 2,
+        "Banh mi au jacque et légumes marinés": 1,
+        "Arepas garnies au jacque effiloché et avocat": 1,
+        "Club sandwich au tempeh fumé, avocat et laitue": 1,
+        "Burger de haricots noirs": 1
+      }
+    },
+    {
+      "id": "gyozas-porc",
+      "title": "Gyozas au porc",
+      "ingredients": [
+        "porc haché",
+        "chou chinois",
+        "ciboule",
+        "gingembre",
+        "feuilles de raviolis"
+      ],
+      "tags": [
+        "porc"
+      ],
+      "relevant": {
+        "Gyozas au seitan haché et chou chinois": 2,
+        "Bao vapeur aux shiitakés séchés et chou chinois": 1,
+        "Samoussas aux champignons hachés et petits pois": 1
+      }
+    },
+    {
+      "id": "mapo-tofu",
+      "title": "Mapo tofu au porc",
+      "ingredients": [
+        "tofu",
+        "porc haché",
+        "doubanjiang",
+        "poivre du Sichuan",
+        "ail",
+        "ciboule"
+      ],
+      "tags": [
+        "porc"
+      ],
+      "relevant": {
+        "Mapo tofu aux shiitakés séchés et sauce pimentée": 2,
+        "Sundubu jjigae au tofu soyeux et gochujang": 1,
+        "Nouilles dan dan aux champignons hachés": 1
+      }
+    },
+    {
+      "id": "ramen-tonkotsu",
+      "title": "Ramen tonkotsu",
+      "ingredients": [
+        "poitrine de porc",
+        "nouilles ramen",
+        "œuf",
+        "sauce soja",
+        "ciboule",
+        "nori"
+      ],
+      "tags": [
+        "porc"
+      ],
+      "relevant": {
+        "Ramen aux shiitakés séchés et miso": 2,
+        "Soupe miso aux nouilles udon et tofu fumé": 1,
+        "Pho aux shiitakés séchés et nouilles de riz": 1
+      }
+    },
+    {
+      "id": "spaghetti-carbonara",
+      "title": "Spaghetti carbonara",
+      "ingredients": [
+        "spaghetti",
+        "lardons",
+        "œufs",
+        "parmesan",
+        "poivre noir"
+      ],
+      "tags": [
+        "porc"
+      ],
+      "relevant": {
+        "Spaghetti à la carbonara de tempeh fumé": 2,
+        "Spätzle à la crème de moutarde et tofu fumé": 1,
+        "Raviolis à la crème de noix et sauge": 1,
+        "Gnocchis à la crème de champignons": 1,
+        "Pâtes au pesto de noix et roquette": 1,
+        "Pâtes au pesto et parmesan": 1
+      }
+    },
+    {
+      "id": "choucroute",
+      "title": "Choucroute garnie",
+      "ingredients": [
+        "choucroute",
+        "saucisses de Strasbourg",
+        "lard fumé",
+        "pommes de terre",
+        "baies de genièvre",
+        "vin blanc"
+      ],
+      "tags": [
+        "porc"
+      ],
+      "relevant": {
+        "Choucroute végétarienne au tofu fumé": 2,
+        "Tartiflette végétarienne au tempeh fumé": 1,
+        "Spätzle à la crème de moutarde et tofu fumé": 1,
+        "Tarte flambée au tempeh fumé et oignons": 1
+      }
+    },
+    {
+      "id": "tartiflette",
+      "title": "Tartiflette",
+      "ingredients": [
+        "reblochon",
+        "lardons fumés",
+        "pommes de terre",
+        "oignons",
+        "crème fraîche",
+        "vin blanc"
+      ],
+      "tags": [
+        "porc"
+      ],
+      "relevant": {
+        "Tartiflette végétarienne au tempeh fumé": 2,
+        "Gratin de butternut au comté et à la sauge": 1,
+        "Tarte flambée au tempeh fumé et oignons": 1,
+        "Choucroute végétarienne au tofu fumé": 1,
+        "Gratin de chou-fleur à la béchamel": 1,
+        "Gratin dauphinois": 1
+      }
+    },
+    {
+      "id": "quiche-lorraine",
+      "title": "Quiche lorraine",
+      "ingredients": [
+        "pâte brisée",
+        "lardons",
+        "œufs",
+        "crème fraîche",
+        "lait",
+        "muscade"
+      ],
+      "tags": [
+        "porc"
+      ],
+      "relevant": {
+        "Quiche aux poireaux et au chèvre frais": 2,
+        "Tarte flambée au tempeh fumé et oignons": 1,
+        "Tarte au roquefort, poires et noix": 1,
+        "Clafoutis salé aux tomates marinées et chèvre": 1,
+        "Cake salé au tofu émietté et olives": 1,
+        "Quiche aux poireaux": 2,
+        "Tarte aux légumes d'été": 1
+      }
+    },
+    {
+      "id": "tarte-flambee",
+      "title": "Flammekueche",
+      "ingredients": [
+        "pâte à pain",
+        "lardons",
+        "oignons",
+        "crème fraîche",
+        "fromage blanc"
+      ],
+      "tags": [
+        "porc"
+      ],
+      "relevant": {
+        "Tarte flambée au tempeh fumé et oignons": 2,
+        "Quiche aux poireaux et au chèvre frais": 1,
+        "Pizza aux légumes grillés et mozzarella": 1,
+        "Pizza margherita maison": 1
+      }
+    },
+    {
+      "id": "cassoulet",
+      "title": "Cassoulet",
+      "ingredients": [
+        "saucisses de Toulouse",
+        "confit de canard",
+        "haricots blancs",
+        "lard",
+        "tomates",
+        "ail"
+      ],
+      "tags": [
+        "mixte"
+      ],
+      "relevant": {
+        "Cassoulet végétarien aux haricots blancs": 2,
+        "Haricots blancs au four à la tomate et à la sauge": 1,
+        "Feijoada végétarienne aux haricots rouges": 1
+      }
+    },
+    {
+      "id": "riz-cantonais",
+      "title": "Riz cantonais",
+      "ingredients": [
+        "riz",
+        "jambon",
+        "œufs",
+        "petits pois",
+        "crevettes",
+        "sauce soja"
+      ],
+      "tags": [
+        "mixte"
+      ],
+      "relevant": {
+        "Riz sauté au tofu fumé et petits pois": 2,
+        "Nasi goreng au soja texturé et légumes": 1,
+        "Bibimbap au tofu émietté et légumes croquants": 1,
+        "Riz cantonais végétarien": 2,
+        "Riz sauté aux légumes et œufs": 2
+      }
+    },
+    {
+      "id": "fish-and-chips",
+      "title": "Fish and chips",
+      "ingredients": [
+        "cabillaud",
+        "bière",
+        "farine",
+        "pommes de terre",
+        "petits pois"
+      ],
+      "tags": [
+        "poisson"
+      ],
+      "relevant": {
+        "Croquettes de coeurs de palmier et sauce tartare": 1,
+        "Tempura de tofu ferme et légumes": 1,
+        "Pleurotes croustillants panés au babeurre et paprika fumé": 1
+      }
+    },
+    {
+      "id": "bagel-saumon",
+      "title": "Bagel au saumon fumé",
+      "ingredients": [
+        "bagel",
+        "saumon fumé",
+        "cream cheese",
+        "aneth",
+        "câpres",
+        "oignon rouge"
+      ],
+      "tags": [
+        "poisson"
+      ],
+      "relevant": {
+        "Bagels aux carottes fumées et fromage frais": 2,
+        "Blinis aux carottes fumées et crème d'aneth": 1,
+        "Tartare de carottes fumées à l'avocat et aneth": 1,
+        "Wraps de carottes fumées au houmous et roquette": 1
+      }
+    },
+    {
+      "id": "ceviche",
+      "title": "Ceviche de dorade",
+      "ingredients": [
+        "dorade",
+        "citron vert",
+        "oignon rouge",
+        "piment",
+        "coriandre",
+        "avocat"
+      ],
+      "tags": [
+        "poisson"
+      ],
+      "relevant": {
+        "Ceviche végétal de coeurs de palmier au citron vert": 2,
+        "Salade de coeurs de palmier à l'avocat et citron vert": 1,
+        "Tartare de carottes fumées à l'avocat et aneth": 1,
+        "Carpaccio de carottes fumées et graines de courge": 1
+      }
+    },
+    {
+      "id": "sandwich-thon",
+      "title": "Sandwich au thon mayonnaise",
+      "ingredients": [
+        "thon en boîte",
+        "mayonnaise",
+        "pain de mie",
+        "céleri",
+        "oignon rouge"
+      ],
+      "tags": [
+        "poisson"
+      ],
+      "relevant": {
+        "Sandwich aux pois chiches écrasés et céleri": 2,
+        "Club sandwich au tempeh fumé, avocat et laitue": 1,
+        "Wraps de carottes fumées au houmous et roquette": 1
+      }
+    },
+    {
+      "id": "paella-fruits-de-mer",
+      "title": "Paella aux fruits de mer",
+      "ingredients": [
+        "riz rond",
+        "crevettes",
+        "moules",
+        "chorizo",
+        "poivron rouge",
+        "safran",
+        "petits pois"
+      ],
+      "tags": [
+        "fruits-de-mer"
+      ],
+      "relevant": {
+        "Paella végétarienne aux artichauts et haricots blancs": 2,
+        "Riz créole aux haricots rouges épicés": 1,
+        "Gumbo végétarien aux haricots rouges épicés et gombos": 1,
+        "Riz pilaf aux haricots rouges épicés et poivrons": 1
+      }
+    },
+    {
+      "id": "moules-marinieres",
+      "title": "Moules marinières",
+      "ingredients": [
+        "moules",
+        "vin blanc",
+        "échalotes",
+        "persil",
+        "beurre",
+        "crème"
+      ],
+      "tags": [
+        "fruits-de-mer"
+      ],
+      "relevant": {
+        "Poêlée de pleurotes à la crème et au vin blanc": 1,
+        "Fricassée de coeurs de palmier au citron et câpres": 1
+      }
+    },
+    {
+      "id": "pad-thai-crevettes",
+      "title": "Pad thaï aux crevettes",
+      "ingredients": [
+        "nouilles de riz",
+        "crevettes",
+        "œufs",
+        "pousses de soja",
+        "cacahuètes",
+        "sauce de poisson"
+      ],
+      "tags": [
+        "fruits-de-mer"
+      ],
+      "relevant": {
+        "Pad thaï au tofu et cacahuètes": 2,
+        "Nouilles soba sautées aux légumes croquants": 1,
+        "Yakisoba aux pleurotes et légumes croquants": 1,
+        "Nasi goreng au soja texturé et légumes": 1,
+        "Gado-gado de tempeh à la sauce cacahuète": 1,
+        "Nouilles sautées au tofu (pad thaï végétarien)": 2,
+        "Wok de légumes au tofu": 1
+      }
+    },
+    {
+      "id": "croque-monsieur",
+      "title": "Croque-monsieur",
+      "ingredients": [
+        "pain de mie",
+        "jambon",
+        "emmental",
+        "béchamel",
+        "beurre"
+      ],
+      "tags": [
+        "porc"
+      ],
+      "relevant": {
+        "Croque-monsieur végétarien": 2,
+        "Welsh rarebit au tempeh fumé et bière brune": 1,
+        "Club sandwich au tempeh fumé, avocat et laitue": 1,
+        "Tartines gratinées aux pleurotes et au chèvre": 1
+      }
+    },
+    {
+      "id": "salade-cesar",
+      "title": "Salade César au poulet",
+      "ingredients": [
+        "blanc de poulet",
+        "laitue romaine",
+        "parmesan",
+        "croûtons",
+        "sauce César"
+      ],
+      "tags": [
+        "poulet"
+      ],
+      "relevant": {
+        "Salade César végétarienne": 2,
+        "Salade Waldorf aux noix, pomme et céleri": 1
+      }
+    }
+  ]
+}

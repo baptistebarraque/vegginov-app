@@ -64,3 +64,8 @@ select = ["E", "F", "I", "UP", "B"]
 # a default value; that's the intended usage, not the mutable-default-argument
 # bug B008 guards against.
 extend-immutable-calls = ["fastapi.Depends", "fastapi.Form", "fastapi.File"]
+
+[tool.pytest.ini_options]
+# Puts backend/ on sys.path so tests can import the `scripts` package (e.g.
+# the metric functions of scripts/evaluate_similarity.py), not only veggie_app.
+pythonpath = ["."]

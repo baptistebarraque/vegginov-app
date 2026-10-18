@@ -181,6 +181,19 @@ def delete_recipe(db: Session, recipe: Recipe) -> None:
     db.flush()
 
 
+def build_candidate(recipe: Recipe) -> CandidateRecipe:
+    """The matching layer's view of a stored recipe. Shared by get_suggestions
+    and scripts/evaluate_similarity.py, so the evaluation ranks recipes exactly
+    as /suggestions does."""
+    return CandidateRecipe(
+        id=recipe.id,
+        title_embedding=recipe.embedding,
+        ingredient_names=[ingredient["name"] for ingredient in recipe.ingredients],
+        protein_source=recipe.protein_source,
+        calories_per_portion=recipe.calories_per_portion,
+    )
+
+
 def get_suggestions(
     db: Session,
     title: str,
@@ -213,20 +226,10 @@ def get_suggestions(
             if recipe.price_tier is None or recipe.price_tier <= max_price_tier
         ]
 
-    candidates = [
-        CandidateRecipe(
-            id=recipe.id,
-            title_embedding=recipe.embedding,
-            ingredient_names=[ingredient["name"] for ingredient in recipe.ingredients],
-            protein_source=recipe.protein_source,
-            calories_per_portion=recipe.calories_per_portion,
-        )
-        for recipe in recipes
-    ]
     ranked = rank_candidates(
         query_title_embedding,
         ingredients,
-        candidates,
+        [build_candidate(recipe) for recipe in recipes],
         top_k=SUGGESTION_COUNT,
         calorie_orientation=calorie_orientation,
     )

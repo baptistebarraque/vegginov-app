@@ -726,3 +726,42 @@ third-party library (faiss etc.) — unnecessary, numpy/scipy were already
 direct dependencies and the remaining cost is per-candidate Python overhead
 (~100 µs each), not arithmetic.
 
+---
+
+## Similarity evaluation: a judged query set, scored offline
+
+Date: 2026-10-15
+Context: Matching quality was being judged by eye on a handful of queries,
+and the next planned changes (query parsing, ingredient weighting, a
+dish-structure view, weight tuning) each improve some queries while possibly
+degrading others. The `fusion.py` weights were always meant to be replaced
+"once a set of manually judged pairs exists".
+Decision:
+- **Judged set**, committed: `backend/data/similarity_eval/queries.json`.
+  Each query is a non-vegetarian dish typed the way a user would type it
+  (accents, plurals, cuts such as "blanc de poulet" — deliberately not
+  cleaned up, since handling that input is part of what's measured), with the
+  recipes that should come back graded **2** (the vegetarian version of the
+  dish) or **1** (a suggestion the user would be happy with). Tags group
+  queries by meat/fish family plus `titre-seul` for title-only queries.
+  First draft: 52 queries, 149 distinct judged recipes, covering all 218
+  recipes of the dev database (the curated 160 and the 58 older ones).
+- **Scored against the real table** by `scripts/evaluate_similarity.py`,
+  through the same path as `/suggestions` (`recipe_service.build_candidate`,
+  extracted for this, + `fusion.rank_candidates` + stored title embeddings),
+  without user preferences. Metrics: hit@4 (first screen), ideal@4 (a grade-2
+  recipe on the first screen), MRR, nDCG@12 (exponential gain, so the true
+  vegetarian version ranking first matters most), recall@12. Reported overall
+  and per tag; `--save`/`--compare` diff two runs query by query.
+- **Unjudged = not relevant.** A good recipe nobody judged lowers the score;
+  `-v` lists each query's first 4 so those can be added to the set instead of
+  being read as regressions. The script refuses to run when a judged title is
+  missing from the table (typo or rename would otherwise score silently as
+  "never suggested").
+Alternatives considered: pairwise "A is closer than B" judgments (rejected for
+now — slower to write, and graded lists already give nDCG); judging from the
+batch JSON files instead of the database (rejected — the files live outside
+the repo, and the DB is what users are actually ranked against); scoring in
+pytest with thresholds (rejected — quality is a number to track, not a
+pass/fail gate, until there is a baseline worth protecting).
+

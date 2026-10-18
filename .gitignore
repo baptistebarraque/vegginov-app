@@ -34,3 +34,7 @@ backend/data/flavorgraph/*
 .idea/
 .DS_Store
 Thumbs.db
+
+# Saved runs of scripts/evaluate_similarity.py (--save); the judged query set
+# next to them (queries.json) IS committed
+backend/data/similarity_eval/runs/

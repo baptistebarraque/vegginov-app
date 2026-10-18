@@ -187,6 +187,10 @@ uv run alembic revision --autogenerate -m "description"
 uv run alembic upgrade head
 uv run python -m veggie_app.admin.add_recipe_cli
 uv run python -m veggie_app.admin.create_admin_cli
+# Similarity quality vs the judged set in data/similarity_eval/queries.json
+uv run python -m scripts.evaluate_similarity -v
+uv run python -m scripts.evaluate_similarity --save data/similarity_eval/runs/before.json
+uv run python -m scripts.evaluate_similarity --compare data/similarity_eval/runs/before.json
  
 # Frontend
 cd frontend

@@ -474,3 +474,26 @@ def test_delete_recipe_removes_row(db_session: Session) -> None:
     recipe_service.delete_recipe(db_session, recipe)
 
     assert db_session.get(Recipe, recipe_id) is None
+
+
+def test_build_candidate_exposes_what_matching_needs() -> None:
+    recipe = Recipe(
+        id=7,
+        title="Dahl",
+        ingredients=[
+            {"name": "lentilles corail", "quantity": "200 g"},
+            {"name": "lait de coco", "quantity": None},
+        ],
+        allergens=[],
+        protein_source="lentilles corail",
+        calories_per_portion=450.0,
+        embedding=_unit_vector(2),
+    )
+
+    candidate = recipe_service.build_candidate(recipe)
+
+    assert candidate.id == 7
+    assert candidate.title_embedding == _unit_vector(2)
+    assert candidate.ingredient_names == ["lentilles corail", "lait de coco"]
+    assert candidate.protein_source == "lentilles corail"
+    assert candidate.calories_per_portion == 450.0
