@@ -12,23 +12,17 @@ function RequestPasswordResetPage() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  // No email-sending infra yet (docs/ARCHITECTURE.md) — the reset link is
-  // shown directly here instead of being emailed. Remove once real delivery
-  // exists.
-  const [resetLink, setResetLink] = useState<string | null>(null);
+  // The reset link is delivered out of band, never in the response — so the
+  // page shows the same message whether or not the account exists.
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsLoading(true);
     setError(null);
-    setResetLink(null);
     try {
-      const { resetToken } = await requestPasswordReset(email);
-      if (resetToken) {
-        setResetLink(`${window.location.origin}/reset-password/confirm?token=${resetToken}`);
-      } else {
-        setResetLink("__unknown__");
-      }
+      await requestPasswordReset(email);
+      setIsSubmitted(true);
     } catch {
       setError("Impossible de contacter le serveur. Vérifiez votre connexion.");
     } finally {
@@ -38,18 +32,12 @@ function RequestPasswordResetPage() {
 
   return (
     <AuthCard title="Mot de passe oublié">
-      {resetLink ? (
+      {isSubmitted ? (
         <Alert variant="success" className="mt-6">
-          {resetLink === "__unknown__" ? (
-            <p>Si un compte existe pour cet email, un lien de réinitialisation a été généré.</p>
-          ) : (
-            <>
-              <p>Lien de réinitialisation (envoi par email pas encore disponible) :</p>
-              <a href={resetLink} className="mt-1 block break-all underline">
-                {resetLink}
-              </a>
-            </>
-          )}
+          <p>
+            Si un compte existe pour cet email, un lien de réinitialisation vous sera envoyé. Il
+            reste valable une heure.
+          </p>
         </Alert>
       ) : (
         <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">

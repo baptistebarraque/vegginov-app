@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     # Docker image, since these are large external files not committed to
     # git — see backend/data/flavorgraph/README.md.
     flavorgraph_dir: Path = Path("data/flavorgraph")
+    # Origin the password-reset link points at (the frontend, not this API).
+    # Defaults to the Vite dev server; set to the public URL once deployed.
+    frontend_base_url: str = "http://localhost:5173"
 
 
 settings = Settings()

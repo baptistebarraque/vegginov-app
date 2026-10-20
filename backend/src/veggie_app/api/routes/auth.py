@@ -15,7 +15,6 @@ from veggie_app.schemas.auth import (
     ConfirmPasswordResetRequest,
     LoginRequest,
     RequestPasswordResetRequest,
-    RequestPasswordResetResponse,
     SignupRequest,
     StatusResponse,
     UpdateAccountRequest,
@@ -84,22 +83,19 @@ def me(user: User = Depends(auth_service.require_user)) -> UserResponse:
     return UserResponse(email=user.email, is_admin=user.is_admin)
 
 
-@router.post("/password-reset/request", response_model=RequestPasswordResetResponse)
+@router.post("/password-reset/request", response_model=StatusResponse)
 def request_password_reset(
     request: RequestPasswordResetRequest, db: Session = Depends(get_db)
-) -> RequestPasswordResetResponse:
+) -> StatusResponse:
+    # Same response whether or not the email exists, so this endpoint can't
+    # be used to enumerate registered accounts — and the token itself is
+    # never in the response, only delivered out of band to the owner.
     user = db.execute(select(User).where(User.email == request.email)).scalar_one_or_none()
-    if user is None:
-        # Same response whether or not the email exists, so this endpoint
-        # can't be used to enumerate registered accounts.
-        return RequestPasswordResetResponse(status="ok")
-
-    token = auth_service.create_reset_token(db, user)
-    db.commit()
-    # No email-sending infra yet (see docs/ARCHITECTURE.md) — hand the raw
-    # token back directly instead of emailing a link. Must change before any
-    # real deployment.
-    return RequestPasswordResetResponse(status="ok", reset_token=token)
+    if user is not None:
+        token = auth_service.create_reset_token(db, user)
+        db.commit()
+        auth_service.deliver_reset_link(user, token)
+    return StatusResponse(status="ok")
 
 
 @router.post("/password-reset/confirm", response_model=StatusResponse)

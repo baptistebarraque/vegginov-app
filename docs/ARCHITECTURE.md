@@ -425,6 +425,16 @@ Decision:
   enumeration is already guarded (the endpoint always returns 200), but
   handing the token to whoever asked for it, instead of only the account
   owner's inbox, is a placeholder, not a security-reviewed design.
+  - **Update 2026-10-20 — gap closed (token no longer returned):** a
+    security review confirmed the above was an account-takeover hole
+    (anyone knowing an email, the admin's included, could reset its
+    password). The endpoint now always returns `{"status": "ok"}`, and
+    `auth_service.deliver_reset_link` writes the link
+    (`FRONTEND_BASE_URL` + `/reset-password/confirm?token=...`) to the
+    server log at WARNING — WARNING because uvicorn leaves the root logger
+    unconfigured, so only WARNING+ reaches stderr. The operator forwards it
+    to the user by hand. Still no mail dependency; when email delivery is
+    added, only `deliver_reset_link`'s body changes.
 Alternatives considered: drop-and-recreate the sessions table under the new
 name (rejected — needlessly logs out every admin session on deploy for no
 benefit, `rename_table` is just as easy); adding SMTP now (rejected per

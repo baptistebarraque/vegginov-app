@@ -8,6 +8,7 @@ the thin, FastAPI-specific wrappers routes actually depend on.
 """
 
 import hashlib
+import logging
 import secrets
 from datetime import UTC, datetime, timedelta
 
@@ -17,6 +18,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from veggie_app.config import settings
 from veggie_app.database import get_db
 from veggie_app.models.password_reset_token import PasswordResetToken
 from veggie_app.models.user import User
@@ -25,6 +27,8 @@ from veggie_app.models.user_session import UserSession
 SESSION_COOKIE_NAME = "session_token"
 SESSION_DURATION = timedelta(days=7)
 RESET_TOKEN_DURATION = timedelta(hours=1)
+
+logger = logging.getLogger(__name__)
 
 
 class EmailAlreadyRegisteredError(Exception):
@@ -124,6 +128,20 @@ def create_reset_token(db: Session, user: User) -> str:
     db.add(reset_token)
     db.flush()
     return raw_token
+
+
+def deliver_reset_link(user: User, raw_token: str) -> None:
+    """Hands the reset link to the account owner — never to the HTTP caller,
+    since whoever calls /password-reset/request is not necessarily the owner.
+
+    No email-sending infra yet (see docs/ARCHITECTURE.md), so the link goes
+    to the server log, which only the operator can read; they forward it to
+    the user by hand. Logged at WARNING because uvicorn leaves the root
+    logger unconfigured, and only WARNING+ reaches stderr through Python's
+    last-resort handler. Swap this body for a real email send later.
+    """
+    link = f"{settings.frontend_base_url}/reset-password/confirm?token={raw_token}"
+    logger.warning("Password reset link for %s (valid 1h, single use): %s", user.email, link)
 
 
 def consume_reset_token(db: Session, raw_token: str, new_password: str) -> User | None:

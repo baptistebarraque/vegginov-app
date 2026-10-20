@@ -1,3 +1,7 @@
+import logging
+import re
+
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
@@ -110,17 +114,21 @@ def test_logout_clears_session(client: TestClient, db_session: Session) -> None:
 
 
 def test_password_reset_request_and_confirm_round_trip(
-    client: TestClient, db_session: Session
+    client: TestClient, db_session: Session, caplog: pytest.LogCaptureFixture
 ) -> None:
     auth_service.register_user(db_session, "person@example.com", "old password")
     db_session.flush()
 
-    request_response = client.post(
-        "/auth/password-reset/request", json={"email": "person@example.com"}
-    )
+    with caplog.at_level(logging.WARNING, logger=auth_service.__name__):
+        request_response = client.post(
+            "/auth/password-reset/request", json={"email": "person@example.com"}
+        )
     assert request_response.status_code == 200
-    token = request_response.json()["reset_token"]
-    assert token is not None
+    # The token reaches the owner out of band (the server log, for now) —
+    # never the HTTP caller.
+    match = re.search(r"token=(\S+)", caplog.text)
+    assert match is not None
+    token = match.group(1)
 
     confirm_response = client.post(
         "/auth/password-reset/confirm", json={"token": token, "new_password": "new password"}
@@ -133,13 +141,29 @@ def test_password_reset_request_and_confirm_round_trip(
     assert login_response.status_code == 200
 
 
-def test_password_reset_request_does_not_leak_unknown_email(client: TestClient) -> None:
-    response = client.post(
-        "/auth/password-reset/request", json={"email": "nobody@example.com"}
-    )
+def test_password_reset_request_never_returns_the_token(
+    client: TestClient, db_session: Session
+) -> None:
+    # Regression guard: returning the token let anyone reset any account's
+    # password (the admin's included) knowing only its email.
+    auth_service.register_user(db_session, "person@example.com", "old password")
+    db_session.flush()
+
+    response = client.post("/auth/password-reset/request", json={"email": "person@example.com"})
 
     assert response.status_code == 200
-    assert response.json()["reset_token"] is None
+    assert response.json() == {"status": "ok"}
+
+
+def test_password_reset_request_does_not_leak_unknown_email(
+    client: TestClient, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level(logging.WARNING, logger=auth_service.__name__):
+        response = client.post("/auth/password-reset/request", json={"email": "nobody@example.com"})
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+    assert "token=" not in caplog.text
 
 
 def test_password_reset_confirm_rejects_invalid_token(client: TestClient) -> None:

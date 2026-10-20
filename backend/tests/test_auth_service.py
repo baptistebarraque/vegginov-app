@@ -1,3 +1,4 @@
+import logging
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -102,6 +103,18 @@ def test_create_reset_token_then_consume_updates_password(db_session: Session) -
     assert result.id == user.id
     assert auth_service.authenticate(db_session, "person@example.com", "new password") is not None
     assert auth_service.authenticate(db_session, "person@example.com", "old password") is None
+
+
+def test_deliver_reset_link_logs_a_frontend_link_carrying_the_token(
+    db_session: Session, caplog: pytest.LogCaptureFixture
+) -> None:
+    user = auth_service.register_user(db_session, "person@example.com", "old password")
+
+    with caplog.at_level(logging.WARNING, logger=auth_service.__name__):
+        auth_service.deliver_reset_link(user, "raw-token-123")
+
+    assert "person@example.com" in caplog.text
+    assert "/reset-password/confirm?token=raw-token-123" in caplog.text
 
 
 def test_consume_reset_token_is_single_use(db_session: Session) -> None:

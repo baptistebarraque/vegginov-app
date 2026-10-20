@@ -72,7 +72,7 @@ export async function getCurrentUser(): Promise<User | null> {
   return toUser((await response.json()) as UserResponseBody);
 }
 
-export async function requestPasswordReset(email: string): Promise<{ resetToken: string | null }> {
+export async function requestPasswordReset(email: string): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/auth/password-reset/request`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -82,9 +82,6 @@ export async function requestPasswordReset(email: string): Promise<{ resetToken:
   if (!response.ok) {
     throw new Error(await extractErrorMessage(response, `Request failed: ${response.status}`));
   }
-
-  const body = (await response.json()) as { reset_token: string | null };
-  return { resetToken: body.reset_token };
 }
 
 export async function confirmPasswordReset(token: string, newPassword: string): Promise<void> {

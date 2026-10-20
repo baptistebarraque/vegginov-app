@@ -26,14 +26,6 @@ class RequestPasswordResetRequest(BaseModel):
     email: str
 
 
-class RequestPasswordResetResponse(BaseModel):
-    status: str
-    # Present only because there is no email-sending infra yet (see
-    # docs/ARCHITECTURE.md) — the raw reset token/link is handed back here
-    # instead of being emailed. Must be removed once real delivery exists.
-    reset_token: str | None = None
-
-
 class ConfirmPasswordResetRequest(BaseModel):
     token: str
     new_password: str

@@ -149,32 +149,34 @@ describe("requestPasswordReset", () => {
     vi.unstubAllGlobals();
   });
 
-  it("returns the reset token from the response", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ status: "ok", reset_token: "abc123" }),
+  it("POSTs the email and resolves without exposing any token", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ status: "ok" }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(requestPasswordReset("person@example.com")).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\/auth\/password-reset\/request$/),
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ email: "person@example.com" }),
       }),
     );
-
-    await expect(requestPasswordReset("person@example.com")).resolves.toEqual({
-      resetToken: "abc123",
-    });
   });
 
-  it("returns a null token when the account doesn't exist", async () => {
+  it("throws when the server responds with an error", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ status: "ok", reset_token: null }),
+        ok: false,
+        status: 500,
+        json: () => Promise.resolve({}),
       }),
     );
 
-    await expect(requestPasswordReset("nobody@example.com")).resolves.toEqual({
-      resetToken: null,
-    });
+    await expect(requestPasswordReset("person@example.com")).rejects.toThrow();
   });
 });
 
