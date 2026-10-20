@@ -1,0 +1,38 @@
+# Production overlay, on top of docker-compose.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# Adds Caddy (HTTPS + built frontend + /api proxy) and switches the backend
+# to APP_ENV=production. Everything is derived from SITE_ADDRESS in .env.
+services:
+  backend:
+    environment:
+      APP_ENV: production
+      CORS_ALLOWED_ORIGINS: https://${SITE_ADDRESS:-localhost}
+      FRONTEND_BASE_URL: https://${SITE_ADDRESS:-localhost}
+      # Let uvicorn trust X-Forwarded-For from Caddy, so the API sees the
+      # visitor's IP (rate limiting) rather than Caddy's. Safe because the
+      # backend port is loopback-only: Caddy is the only remote path in, and
+      # Caddy overwrites X-Forwarded-For sent by clients.
+      FORWARDED_ALLOW_IPS: "*"
+
+  caddy:
+    build: ./frontend
+    restart: unless-stopped
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-localhost}
+    ports:
+      # The only ports open to the internet. 80 is needed for the Let's
+      # Encrypt challenge and redirects to https.
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      # Certificates and keys: must persist, or every restart asks Let's
+      # Encrypt again and hits its rate limits.
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+
+volumes:
+  caddy_data:
+  caddy_config:

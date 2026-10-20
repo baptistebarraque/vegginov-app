@@ -18,7 +18,16 @@ from veggie_app.config import settings
 # StaticFiles requires the directory to exist at mount time.
 settings.upload_dir.mkdir(parents=True, exist_ok=True)
 
-app = FastAPI(title="Veggie App API")
+
+def api_docs_urls() -> dict[str, str | None]:
+    """Swagger/ReDoc/OpenAPI in development only: in production they would
+    hand anyone a map of every endpoint, admin ones included."""
+    if settings.app_env == "production":
+        return {"docs_url": None, "redoc_url": None, "openapi_url": None}
+    return {"docs_url": "/docs", "redoc_url": "/redoc", "openapi_url": "/openapi.json"}
+
+
+app = FastAPI(title="Veggie App API", **api_docs_urls())
 app.add_middleware(
     CORSMiddleware,
     # CORS_ALLOWED_ORIGINS (config.py): the Vite dev server by default, the

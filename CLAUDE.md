@@ -72,6 +72,7 @@ See `docs/ROADMAP.md` for the full phase breakdown.
 | Accessible primitives | `@radix-ui/react-label`, `@radix-ui/react-dialog` | unstyled accessible label + dialog (admin delete confirmation) behind the styled UI components |
 | Animation | `framer-motion` (v12) | Phase 3 hover/click recipe-grid interaction — `layout` animations handle the coordinated resize of the hovered card *and* its 3 siblings (corner-anchored grow/shrink) via automatic FLIP, without hand-computing a transform per card as plain CSS/anime.js would require |
 | Containerization | Docker + docker-compose | reproducible env from day one |
+| Production web server | Caddy (`caddy:2.10-alpine`, Apache 2.0, free) | production only (`docker-compose.prod.yml`): automatic free HTTPS certificates (Let's Encrypt), serves the built frontend, proxies `/api` to the backend, sets security headers — one small config file vs nginx + certbot |
 | Python deps | `uv` + `pyproject.toml` | |
 | Lint/format | `ruff` (backend), ESLint + Prettier (frontend) | |
 | Tests | `pytest` (backend), `vitest` (frontend) | |
@@ -87,6 +88,7 @@ veggie-app/
 ├── CLAUDE.md
 ├── README.md
 ├── docker-compose.yml
+├── docker-compose.prod.yml            # production overlay: Caddy + APP_ENV=production
 ├── .env.example
 ├── docs/
 │   ├── ARCHITECTURE.md
@@ -141,6 +143,8 @@ veggie-app/
 │   ├── tests/
 │   └── scripts/seed_db.py
 ├── frontend/
+│   ├── Dockerfile                     # production image: build the site, serve it with Caddy
+│   ├── Caddyfile                      # HTTPS, security headers, /api proxy, SPA fallback
 │   ├── src/
 │   │   ├── api/                       # HTTP calls to backend
 │   │   ├── components/                # app components (Header, RecipeForm, ...)
@@ -180,6 +184,10 @@ veggie-app/
 ```bash
 # Full environment (Postgres + backend)
 docker-compose up --build
+
+# Production (Caddy + HTTPS on SITE_ADDRESS; see "Deployment" in README.md)
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+docker compose exec backend alembic upgrade head
  
 # Backend
 cd backend

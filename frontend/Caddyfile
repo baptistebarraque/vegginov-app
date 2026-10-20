@@ -1,0 +1,41 @@
+# Production entry point (see docker-compose.prod.yml). SITE_ADDRESS is the
+# public domain, e.g. vegginov.fr: Caddy then obtains and renews a free
+# Let's Encrypt certificate by itself. The default, localhost, uses Caddy's
+# own local certificate authority instead, to try the setup on a dev PC.
+{$SITE_ADDRESS:localhost} {
+	encode zstd gzip
+
+	# Recipe images are capped at 5 MB by the backend; CSV imports are small.
+	request_body {
+		max_size 10MB
+	}
+
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		# Everything (scripts, fonts, images, API) is served from this one
+		# origin. 'unsafe-inline' styles only, for libraries that inject them.
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		-Server
+	}
+
+	# HSTS makes browsers refuse plain http for this host from then on. Not
+	# sent for localhost: it would also hit the Vite dev server on
+	# http://localhost:5173 and break it.
+	@public not host localhost
+	header @public Strict-Transport-Security "max-age=31536000"
+
+	handle_path /api/* {
+		reverse_proxy backend:8000
+	}
+
+	# Single-page app: unknown paths (/account, /admin/...) get index.html,
+	# and react-router picks the page.
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

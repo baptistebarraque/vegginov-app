@@ -961,3 +961,44 @@ refusing to start on unsafe production settings (rejected — a warning in a
 log nobody reads is how default passwords reach production).
 Not covered here: HTTPS itself (a reverse proxy in front of the API and the
 built frontend) — a separate step, since it adds a tool to the stack.
+
+---
+
+## Production web server: Caddy in front, same origin for site and API
+
+Date: 2026-10-20
+Context: the app had no production setup at all: the frontend only ran
+through the Vite dev server, and nothing provided HTTPS, which the Secure
+session cookie (APP_ENV=production) requires. The user wanted a tool that
+stays free once deployed.
+Decision:
+- **Caddy** (Apache 2.0) in `docker-compose.prod.yml`, an overlay on the dev
+  compose file, so dev (`docker compose up` + `npm run dev`) is unchanged.
+  It obtains and renews Let's Encrypt certificates for `SITE_ADDRESS` by
+  itself (`localhost` = Caddy's local CA, to try production on a dev PC).
+  Certificates live in the `caddy_data` volume, which must persist.
+- **`frontend/Dockerfile`** builds the site with Node, then copies `dist/`
+  into the Caddy image: one container serves the site and proxies the API.
+- **Same origin**: `https://SITE/` is the site and `https://SITE/api/*` the
+  API (`handle_path` strips `/api`, so backend routes are unchanged; images
+  work since the frontend already builds `${API_BASE_URL}${image_url}`).
+  `VITE_API_BASE_URL=/api` is baked in at build time. No cross-origin
+  requests at all, so CORS and SameSite never come into play.
+- **Security headers in the Caddyfile**: a CSP allowing only this origin
+  (plus inline styles for libraries that inject them), nosniff,
+  `X-Frame-Options: DENY`, a referrer policy, and HSTS — except for
+  `localhost`, where HSTS would also force https onto the Vite dev server
+  on `http://localhost:5173`. `request_body max_size 10MB` caps uploads.
+- **Visitor IP**: `FORWARDED_ALLOW_IPS=*` lets uvicorn trust Caddy's
+  `X-Forwarded-For`. Safe because the backend port is loopback-only and
+  Caddy overwrites the header clients send.
+- **API docs off in production** (`main.api_docs_urls`): they would map
+  every endpoint, admin ones included, for anyone.
+Verified locally on an isolated compose project (fresh DB, strong
+password): http -> https redirect, headers, SPA fallback, `/api` proxy,
+`/api/docs` 404, Secure cookie and a logged-in `/auth/me` over https.
+Alternatives considered: nginx + certbot (rejected — two tools and a renewal
+job to maintain for the same result); serving the frontend from FastAPI
+(rejected — mixes concerns and still needs something for TLS); API on a
+subdomain (rejected — reintroduces CORS for no benefit at this size).
+

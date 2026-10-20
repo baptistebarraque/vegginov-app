@@ -142,6 +142,40 @@ CI (GitHub Actions) runs these checks automatically on every push.
 
 ---
 
+## Deployment (production)
+
+Production adds Caddy in front of the app (`docker-compose.prod.yml`): it
+serves the built frontend, forwards `/api/*` to the backend, and gets free
+HTTPS certificates from Let's Encrypt on its own. Only ports 80 and 443 are
+open to the network; Postgres and the backend stay on `127.0.0.1`.
+
+1. On the server, copy `.env.example` to `.env` and set:
+   - `SITE_ADDRESS` — your domain (e.g. `vegginov.fr`), whose DNS points at
+     the server
+   - `POSTGRES_PASSWORD` — a generated one:
+     `python -c "import secrets; print(secrets.token_urlsafe(32))"`
+     (docker-compose builds the backend's database URL from it;
+     `DATABASE_URL` in `.env` only serves runs outside Docker)
+   The overlay itself sets `APP_ENV=production`, and the backend refuses to
+   start on the dev password or on non-https origins.
+2. Start it and apply migrations:
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+   docker compose exec backend alembic upgrade head
+   ```
+3. Create the admin account:
+   `docker compose exec backend python -m veggie_app.admin.create_admin_cli`
+
+To try it on a dev PC first, leave `SITE_ADDRESS` unset: it serves
+`https://localhost` with a local certificate (the browser warns once). The
+backend then also needs a non-default DB password, so use a separate
+project name and volume rather than the dev database.
+
+Password-reset links are written to the backend log until email delivery
+exists: `docker compose logs backend | grep "reset link"`.
+
+---
+
 ## Project structure
 
 See the "Repository structure" section of [`CLAUDE.md`](./CLAUDE.md) for the
