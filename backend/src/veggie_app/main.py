@@ -21,11 +21,10 @@ settings.upload_dir.mkdir(parents=True, exist_ok=True)
 app = FastAPI(title="Veggie App API")
 app.add_middleware(
     CORSMiddleware,
-    # Vite dev server origin. Both host forms are listed since browsers treat
-    # localhost and 127.0.0.1 as different origins for CORS purposes, and
-    # cookies are involved here (unlike the origin-less /suggestions calls).
-    # Revisit once the frontend has a deployed URL.
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    # CORS_ALLOWED_ORIGINS (config.py): the Vite dev server by default, the
+    # public frontend URL in production. Cookies are involved, so this must
+    # stay an explicit list, never "*".
+    allow_origins=settings.cors_allowed_origins,
     # Required so the browser sends/receives the admin session cookie.
     # Safe with an explicit origin list above (browsers reject this combined
     # with allow_origins=["*"]).

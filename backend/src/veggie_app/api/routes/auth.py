@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from veggie_app.config import settings
 from veggie_app.database import get_db
 from veggie_app.models.user import User
 from veggie_app.schemas.auth import (
@@ -32,8 +33,21 @@ def _set_session_cookie(response: Response, token: str) -> None:
         token,
         httponly=True,
         samesite="lax",
-        secure=False,  # local dev over http://localhost; must be True behind HTTPS
+        # Secure in production (HTTPS only); off in dev, where the API is
+        # plain http://localhost — see APP_ENV in config.py.
+        secure=settings.cookie_secure,
         max_age=int(auth_service.SESSION_DURATION.total_seconds()),
+    )
+
+
+def _clear_session_cookie(response: Response) -> None:
+    # Same attributes as _set_session_cookie, so the deleting Set-Cookie
+    # matches the cookie it replaces.
+    response.delete_cookie(
+        auth_service.SESSION_COOKIE_NAME,
+        httponly=True,
+        samesite="lax",
+        secure=settings.cookie_secure,
     )
 
 
@@ -74,7 +88,7 @@ def logout(
     if raw_token is not None:
         auth_service.delete_session(db, raw_token)
         db.commit()
-    response.delete_cookie(auth_service.SESSION_COOKIE_NAME)
+    _clear_session_cookie(response)
     return StatusResponse(status="ok")
 
 
@@ -135,5 +149,5 @@ def delete_account(
 ) -> StatusResponse:
     auth_service.delete_account(db, user)
     db.commit()
-    response.delete_cookie(auth_service.SESSION_COOKIE_NAME)
+    _clear_session_cookie(response)
     return StatusResponse(status="ok")

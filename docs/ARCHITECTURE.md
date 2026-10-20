@@ -80,7 +80,8 @@ Decision:
   independent services) doesn't apply.
 - Cookie is `secure=False` — correct for local dev over `http://localhost`,
   but this **must become `True`** before any real HTTPS deployment, or
-  browsers will still send it over plain HTTP.
+  browsers will still send it over plain HTTP. *(2026-10-20: now driven by
+  `APP_ENV` — see "Deployment settings" below.)*
 - No CSRF token scheme: `SameSite=Lax` already blocks the cookie on
   cross-site POST requests, covering the realistic risk for a single-admin
   POC. Revisit if/when phase 4 adds more sensitive authenticated actions.
@@ -917,3 +918,46 @@ pois chiches" has no cuisine; curation is cheap at this size); embedding the
 query against tag labels (rejected — the same title model this view exists to
 complement); a single free-text "category" field (rejected — exact-match
 scoring needs closed vocabularies).
+
+---
+
+## Deployment settings: one APP_ENV switch, loopback-only ports
+
+Date: 2026-10-20
+Context: the security review found the session cookie hard-coded
+`secure=False`, CORS hard-coded to the Vite dev origins, and docker-compose
+publishing Postgres (dev password `veggie`) and the API on every network
+interface. All four are correct on a dev machine and dangerous on a server,
+so the fix had to switch with the environment instead of being edited by hand
+before each deployment.
+Decision:
+- **`APP_ENV` = `development` (default) | `production`** in `config.py`.
+  Production sets the cookie `Secure` (`settings.cookie_secure`, also used
+  when the cookie is cleared, so the deleting `Set-Cookie` matches) and
+  **refuses to start** (`_check_production_safety`) if the DB password is
+  the dev default or under 16 characters, or if `CORS_ALLOWED_ORIGINS` /
+  `FRONTEND_BASE_URL` aren't `https://`. It reports every problem at once.
+  Defaulting to development keeps local runs, tests and CI unchanged.
+- **`CORS_ALLOWED_ORIGINS`**: comma-separated (pydantic-settings `NoDecode`
+  + a splitting validator, rather than the JSON list it expects by default),
+  defaulting to both localhost forms of the Vite dev server.
+- **`hide_input_in_errors=True`** on the settings model: a validation error
+  at startup would otherwise echo `DATABASE_URL`, password included, into
+  the logs.
+- **Ports bind to `127.0.0.1`** by default (`POSTGRES_BIND_ADDRESS`,
+  `BACKEND_BIND_ADDRESS` in docker-compose). Loopback still serves
+  everything that runs on the same machine (backend via `uv run`, pytest,
+  psql, the browser in dev, a reverse proxy in production). Removing the
+  Postgres port mapping outright would break running the backend and tests
+  outside Docker. Docker-published ports bypass host firewalls like `ufw`,
+  so the bind address, not the firewall, is what keeps them private.
+- Changing `POSTGRES_PASSWORD` only takes effect when the data volume is
+  first created; an existing database also needs `ALTER USER`.
+Alternatives considered: separate flags per behaviour (`COOKIE_SECURE`,
+etc. — rejected: one switch can't be half-forgotten, and the startup guard
+covers the values that must differ per deployment); deriving `Secure` from
+the `FRONTEND_BASE_URL` scheme (rejected as too implicit); warning instead of
+refusing to start on unsafe production settings (rejected — a warning in a
+log nobody reads is how default passwords reach production).
+Not covered here: HTTPS itself (a reverse proxy in front of the API and the
+built frontend) — a separate step, since it adds a tool to the stack.

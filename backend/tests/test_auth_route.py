@@ -5,6 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+from veggie_app.config import settings
 from veggie_app.services import auth_service
 
 
@@ -21,6 +22,64 @@ def test_login_succeeds_and_sets_cookie(client: TestClient, db_session: Session)
     assert response.status_code == 200
     assert response.json() == {"email": "admin@example.com", "is_admin": True}
     assert auth_service.SESSION_COOKIE_NAME in response.cookies
+
+
+def test_session_cookie_is_not_secure_in_development(
+    client: TestClient, db_session: Session
+) -> None:
+    auth_service.register_user(db_session, "person@example.com", "correct horse battery")
+    db_session.flush()
+
+    response = client.post(
+        "/auth/login", json={"email": "person@example.com", "password": "correct horse battery"}
+    )
+
+    set_cookie = response.headers["set-cookie"].lower()
+    assert "httponly" in set_cookie
+    assert "secure" not in set_cookie
+
+
+def test_session_cookie_is_secure_in_production(
+    client: TestClient, db_session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings, "app_env", "production")
+    auth_service.register_user(db_session, "person@example.com", "correct horse battery")
+    db_session.flush()
+
+    login_response = client.post(
+        "/auth/login", json={"email": "person@example.com", "password": "correct horse battery"}
+    )
+    # The test client (plain http) won't resend a Secure cookie on its own,
+    # so hand it back explicitly. The deleting Set-Cookie on logout must
+    # carry the same Secure flag.
+    client.cookies.set(
+        auth_service.SESSION_COOKIE_NAME,
+        login_response.cookies[auth_service.SESSION_COOKIE_NAME],
+    )
+    logout_response = client.post("/auth/logout")
+
+    assert "secure" in login_response.headers["set-cookie"].lower()
+    assert "secure" in logout_response.headers["set-cookie"].lower()
+
+
+def test_cors_allows_configured_origin_with_credentials(client: TestClient) -> None:
+    response = client.options(
+        "/auth/login",
+        headers={"Origin": "http://localhost:5173", "Access-Control-Request-Method": "POST"},
+    )
+
+    assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
+    assert response.headers["access-control-allow-credentials"] == "true"
+
+
+def test_cors_rejects_unlisted_origin(client: TestClient) -> None:
+    response = client.options(
+        "/auth/login",
+        headers={"Origin": "https://evil.example", "Access-Control-Request-Method": "POST"},
+    )
+
+    assert response.status_code == 400
+    assert "access-control-allow-origin" not in response.headers
 
 
 def test_login_fails_with_wrong_password(client: TestClient, db_session: Session) -> None:
