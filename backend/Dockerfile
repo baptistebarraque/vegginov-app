@@ -1,6 +1,8 @@
 FROM python:3.11-slim
 
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+# Pinned (not :latest) so a new uv release can't silently change how the
+# image builds; same version as the dev machine. Bump deliberately.
+COPY --from=ghcr.io/astral-sh/uv:0.11.28 /uv /uvx /bin/
 
 WORKDIR /app
 
