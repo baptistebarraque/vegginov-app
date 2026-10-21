@@ -1085,3 +1085,27 @@ custom image built with xcaddy); Postgres- or Redis-backed counters
 (unneeded with a single uvicorn worker — revisit if workers are added,
 since each would count separately).
 
+---
+
+## Upload hardening: check what a file is, not what it's called
+
+Date: 2026-10-21
+Context: recipe images were validated by extension only, and both admin
+uploads (image, CSV) were read whole into memory before any size check.
+Only an admin can upload, but a hijacked admin session — or a mistaken
+file — could store an HTML/script file as `photo.png`, then served back
+from `/media` on the app's own origin.
+Decision:
+- `image_service.save_recipe_image` checks the file's leading bytes
+  against the PNG / JPEG signatures matching its extension (no image
+  library needed for that). Caddy's `X-Content-Type-Options: nosniff`
+  covers the serving side.
+- Uploads are read at most one byte past their limit (5 MB image, 5 MB
+  CSV), so an oversized file is refused without being loaded.
+- A CSV that isn't UTF-8 (Excel's default on French Windows is
+  Windows-1252) gets a 400 with a French message instead of a 500.
+Alternatives considered: decoding the image with Pillow (rejected — a new
+direct dependency, and decoding untrusted images is itself an attack
+surface; the signature check stops the realistic case); re-encoding every
+upload (same, plus quality loss).
+

@@ -47,6 +47,12 @@ def _parse_ingredients_field(ingredients: str) -> list[dict]:
     return [entry.model_dump() for entry in parsed]
 
 
+def _read_image_upload(image: UploadFile) -> bytes:
+    # One byte past the limit is enough for save_recipe_image to reject an
+    # oversized file, without first loading all of it into memory.
+    return image.file.read(image_service.MAX_IMAGE_SIZE_BYTES + 1)
+
+
 def _get_recipe_or_404(db: Session, recipe_id: int) -> Recipe:
     recipe = recipe_service.get_recipe(db, recipe_id)
     if recipe is None:
@@ -154,7 +160,9 @@ def create_recipe(
     image_filename = None
     if image is not None and image.filename:
         try:
-            image_filename = image_service.save_recipe_image(image.filename, image.file.read())
+            image_filename = image_service.save_recipe_image(
+                image.filename, _read_image_upload(image)
+            )
         except InvalidImageError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -214,7 +222,9 @@ def update_recipe(
     image_filename = recipe.image_filename
     if image is not None and image.filename:
         try:
-            new_filename = image_service.save_recipe_image(image.filename, image.file.read())
+            new_filename = image_service.save_recipe_image(
+                image.filename, _read_image_upload(image)
+            )
         except InvalidImageError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         image_service.delete_recipe_image(image_filename)
@@ -272,7 +282,15 @@ def import_recipes(
     db: Session = Depends(get_db),
     _admin: User = Depends(auth_service.require_admin),
 ) -> CsvImportResponse:
-    content = file.file.read().decode("utf-8-sig")
+    raw = file.file.read(recipe_import_service.MAX_CSV_IMPORT_BYTES + 1)
+    if len(raw) > recipe_import_service.MAX_CSV_IMPORT_BYTES:
+        raise HTTPException(status_code=400, detail="Le fichier CSV dépasse 5 Mo.")
+    try:
+        content = raw.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise HTTPException(
+            status_code=400, detail="Le fichier CSV doit être encodé en UTF-8."
+        ) from exc
     try:
         recipes = recipe_import_service.import_recipes_from_csv(db, content)
     except CsvImportError as exc:

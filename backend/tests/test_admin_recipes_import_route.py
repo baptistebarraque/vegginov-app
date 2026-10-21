@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from veggie_app.matching.embeddings import EMBEDDING_DIM
 from veggie_app.models.recipe import Recipe
 from veggie_app.models.user import User
-from veggie_app.services import auth_service, recipe_service
+from veggie_app.services import auth_service, recipe_import_service, recipe_service
 
 VALID_CSV = "title,ingredients,allergens\nCurry,lentilles; curry,gluten\nSalade,laitue,\n"
 
@@ -98,3 +98,31 @@ def test_export_returns_csv_attachment_for_admin(
     assert body.splitlines()[0].startswith("title,ingredients,allergens")
     assert "Curry" in body
     assert "Salade" in body
+
+
+def test_import_rejects_csv_over_the_size_limit(
+    client: TestClient, db_session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _login_as_admin(client, db_session)
+    monkeypatch.setattr(recipe_import_service, "MAX_CSV_IMPORT_BYTES", 10)
+
+    response = _upload_csv(client, VALID_CSV)
+
+    assert response.status_code == 400
+    assert "5 Mo" in response.json()["detail"]
+
+
+def test_import_rejects_non_utf8_csv_with_a_clear_message(
+    client: TestClient, db_session: Session
+) -> None:
+    _login_as_admin(client, db_session)
+    # What Excel on French Windows saves by default.
+    windows_1252_csv = "title,ingredients\nGâteau,œuf".encode("cp1252")
+
+    response = client.post(
+        "/admin/recipes/import",
+        files={"file": ("recipes.csv", windows_1252_csv, "text/csv")},
+    )
+
+    assert response.status_code == 400
+    assert "UTF-8" in response.json()["detail"]

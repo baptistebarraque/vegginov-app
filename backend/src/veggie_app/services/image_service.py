@@ -10,6 +10,14 @@ from veggie_app.config import settings
 
 ALLOWED_EXTENSIONS = {".png", ".jpg", ".jpeg"}
 MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
+# The bytes every real file of each format starts with ("magic numbers").
+# The extension alone is just a name: without this, an HTML or script file
+# renamed photo.png would be stored and served back from /media.
+_SIGNATURES = {
+    ".png": b"\x89PNG\r\n\x1a\n",
+    ".jpg": b"\xff\xd8\xff",
+    ".jpeg": b"\xff\xd8\xff",
+}
 
 
 class InvalidImageError(ValueError):
@@ -22,6 +30,8 @@ def save_recipe_image(filename: str, contents: bytes) -> str:
         raise InvalidImageError("L'image doit être au format PNG ou JPEG.")
     if len(contents) > MAX_IMAGE_SIZE_BYTES:
         raise InvalidImageError("L'image dépasse la taille maximale de 5 Mo.")
+    if not contents.startswith(_SIGNATURES[extension]):
+        raise InvalidImageError("Le fichier n'est pas une image PNG ou JPEG valide.")
 
     settings.upload_dir.mkdir(parents=True, exist_ok=True)
     stored_filename = f"{uuid.uuid4().hex}{extension}"

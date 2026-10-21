@@ -17,6 +17,8 @@ from veggie_app.models.recipe import IngredientEntry, Recipe
 from veggie_app.services import recipe_service
 
 REQUIRED_COLUMNS = {"title", "ingredients"}
+# ~25x the 218-recipe export: room to grow, but a bounded upload.
+MAX_CSV_IMPORT_BYTES = 5 * 1024 * 1024
 LIST_DELIMITER = ";"
 QUANTITY_DELIMITER = ":"
 

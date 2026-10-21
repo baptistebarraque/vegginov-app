@@ -9,6 +9,9 @@ from veggie_app.models.recipe import Recipe
 from veggie_app.models.user import User
 from veggie_app.services import auth_service, recipe_service
 
+# Uploaded images must start with a real PNG signature (image_service).
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+
 
 def _ingredients_field(entries: list[dict]) -> str:
     return json.dumps(entries)
@@ -156,7 +159,7 @@ def test_create_recipe_with_image_stores_and_returns_url(
     response = client.post(
         "/admin/recipes",
         data={"title": "Salade", "ingredients": _ingredients_field([{"name": "laitue"}])},
-        files={"image": ("photo.png", b"fake-png-bytes", "image/png")},
+        files={"image": ("photo.png", PNG_SIGNATURE + b"fake-png-bytes", "image/png")},
     )
 
     assert response.status_code == 200
@@ -169,7 +172,7 @@ def test_create_recipe_with_image_stores_and_returns_url(
     assert fetched is not None
     assert fetched.image_filename is not None
     assert (image_service.settings.upload_dir / fetched.image_filename).read_bytes() == (
-        b"fake-png-bytes"
+        PNG_SIGNATURE + b"fake-png-bytes"
     )
 
 

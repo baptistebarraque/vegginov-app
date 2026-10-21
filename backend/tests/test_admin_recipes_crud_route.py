@@ -9,6 +9,9 @@ from veggie_app.models.recipe import Recipe
 from veggie_app.models.user import User
 from veggie_app.services import auth_service, image_service, recipe_service
 
+# Uploaded images must start with a real PNG signature (image_service).
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+
 
 def _ingredients_field(entries: list[dict]) -> str:
     return json.dumps(entries)
@@ -197,13 +200,13 @@ def test_update_recipe_replaces_image_and_deletes_old_file(
 ) -> None:
     monkeypatch.setattr(image_service.settings, "upload_dir", tmp_path / "uploads")
     _login_as_admin(client, db_session)
-    old_filename = image_service.save_recipe_image("old.png", b"old-bytes")
+    old_filename = image_service.save_recipe_image("old.png", PNG_SIGNATURE + b"old-bytes")
     recipe = _create_recipe(db_session, image_filename=old_filename)
 
     response = client.put(
         f"/admin/recipes/{recipe.id}",
         data={"title": "Salade", "ingredients": _ingredients_field([{"name": "laitue"}])},
-        files={"image": ("new.png", b"new-bytes", "image/png")},
+        files={"image": ("new.png", PNG_SIGNATURE + b"new-bytes", "image/png")},
     )
 
     assert response.status_code == 200
@@ -218,7 +221,7 @@ def test_update_recipe_removes_image_when_requested(
 ) -> None:
     monkeypatch.setattr(image_service.settings, "upload_dir", tmp_path / "uploads")
     _login_as_admin(client, db_session)
-    old_filename = image_service.save_recipe_image("old.png", b"old-bytes")
+    old_filename = image_service.save_recipe_image("old.png", PNG_SIGNATURE + b"old-bytes")
     recipe = _create_recipe(db_session, image_filename=old_filename)
 
     response = client.put(
@@ -260,7 +263,7 @@ def test_delete_recipe_removes_row_and_image_file(
 ) -> None:
     monkeypatch.setattr(image_service.settings, "upload_dir", tmp_path / "uploads")
     _login_as_admin(client, db_session)
-    filename = image_service.save_recipe_image("photo.png", b"bytes")
+    filename = image_service.save_recipe_image("photo.png", PNG_SIGNATURE + b"bytes")
     recipe = _create_recipe(db_session, image_filename=filename)
     recipe_id = recipe.id
 
