@@ -2,11 +2,11 @@
 
 from datetime import date
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class WatchlistUpdateRequest(BaseModel):
-    notes: str | None = None
+    notes: str | None = Field(default=None, max_length=2000)
     planned_for: date | None = None
 
 

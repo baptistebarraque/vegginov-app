@@ -1047,3 +1047,41 @@ real proof is a delivered email); Pydantic `min_length` on passwords
 not cover the CLI); requiring the password for account *deletion* too (not
 done yet — would need a password field in the confirm dialog).
 
+---
+
+## Rate limiting and input size caps
+
+Date: 2026-10-21
+Context: nothing bounded how often or how much a client could ask. Login
+could be brute-forced or credential-stuffed at full speed, and
+`/suggestions` — public, no login, and the most CPU-hungry endpoint
+(embedding + scoring every recipe) — accepted unbounded titles and
+ingredient lists, so one script could pin the server's CPU.
+Decision:
+- **`services/rate_limit_service.py`**: a sliding-window `RateLimiter`
+  per client IP, in process memory, applied with
+  `dependencies=[Depends(limit(...))]` on the route. 429 with a French
+  message (which the frontend shows via `describeAuthError`) and a
+  `Retry-After` header. Refused hits aren't recorded, so hammering doesn't
+  extend the wait; idle IPs are swept past 10 000 tracked keys.
+- **Budgets per IP**: login 10 / 5 min, signup 5 / h, reset request 5 / h
+  (also bounds log spam now that reset links go to the log), account
+  update 10 / 5 min (guesses at the current password from a stolen
+  session), suggestions 30 / min.
+- **IP-keyed only, not per account**: a per-email login limit would let
+  anyone lock a user out by failing on purpose.
+- The real visitor IP comes from Caddy's `X-Forwarded-For`
+  (`FORWARDED_ALLOW_IPS`, see "Production web server").
+- **Size caps** (Pydantic `max_length`, so 422 — only reachable by
+  scripts, never by the UI): suggestion title 200 chars, at most 60
+  ingredients of 200 chars; watchlist notes 2000; preference fields and
+  allergen lists bounded. Caddy separately caps request bodies at 10 MB.
+- Tests reset every limiter around each test (`conftest.py`), since all
+  TestClient requests share one "client IP".
+Alternatives considered: `slowapi` (rejected — a dependency for ~60 lines
+whose only state is a dict; same in-memory model by default); Caddy's
+rate-limit module (rejected — not in the standard Caddy build, would need a
+custom image built with xcaddy); Postgres- or Redis-backed counters
+(unneeded with a single uvicorn worker — revisit if workers are added,
+since each would count separately).
+

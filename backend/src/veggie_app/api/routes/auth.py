@@ -20,12 +20,18 @@ from veggie_app.schemas.auth import (
     UpdateAccountRequest,
     UserResponse,
 )
-from veggie_app.services import auth_service
+from veggie_app.services import auth_service, rate_limit_service
 from veggie_app.services.auth_service import (
     EmailAlreadyRegisteredError,
     InvalidEmailError,
     InvalidPasswordError,
     WrongCurrentPasswordError,
+)
+from veggie_app.services.rate_limit_service import (
+    ACCOUNT_UPDATE_LIMITER,
+    LOGIN_LIMITER,
+    PASSWORD_RESET_LIMITER,
+    SIGNUP_LIMITER,
 )
 
 router = APIRouter(prefix="/auth")
@@ -55,7 +61,11 @@ def _clear_session_cookie(response: Response) -> None:
     )
 
 
-@router.post("/signup", response_model=UserResponse)
+@router.post(
+    "/signup",
+    response_model=UserResponse,
+    dependencies=[Depends(rate_limit_service.limit(SIGNUP_LIMITER))],
+)
 def signup(
     request: SignupRequest, response: Response, db: Session = Depends(get_db)
 ) -> UserResponse:
@@ -72,7 +82,11 @@ def signup(
     return UserResponse(email=user.email, is_admin=user.is_admin)
 
 
-@router.post("/login", response_model=UserResponse)
+@router.post(
+    "/login",
+    response_model=UserResponse,
+    dependencies=[Depends(rate_limit_service.limit(LOGIN_LIMITER))],
+)
 def login(
     request: LoginRequest, response: Response, db: Session = Depends(get_db)
 ) -> UserResponse:
@@ -103,7 +117,11 @@ def me(user: User = Depends(auth_service.require_user)) -> UserResponse:
     return UserResponse(email=user.email, is_admin=user.is_admin)
 
 
-@router.post("/password-reset/request", response_model=StatusResponse)
+@router.post(
+    "/password-reset/request",
+    response_model=StatusResponse,
+    dependencies=[Depends(rate_limit_service.limit(PASSWORD_RESET_LIMITER))],
+)
 def request_password_reset(
     request: RequestPasswordResetRequest, db: Session = Depends(get_db)
 ) -> StatusResponse:
@@ -134,7 +152,11 @@ def confirm_password_reset(
     return StatusResponse(status="ok")
 
 
-@router.patch("/account", response_model=UserResponse)
+@router.patch(
+    "/account",
+    response_model=UserResponse,
+    dependencies=[Depends(rate_limit_service.limit(ACCOUNT_UPDATE_LIMITER))],
+)
 def update_account(
     request: UpdateAccountRequest,
     http_request: Request,

@@ -21,6 +21,16 @@ from veggie_app.models.user import User
 from veggie_app.models.user_preference import UserPreference
 from veggie_app.models.user_session import UserSession
 from veggie_app.models.watchlist_entry import WatchlistEntry
+from veggie_app.services import rate_limit_service
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limits() -> Generator[None, None, None]:
+    """Every TestClient request comes from the same "testclient" host, so
+    without this the suite's many logins would trip the limits midway."""
+    rate_limit_service.reset_all()
+    yield
+    rate_limit_service.reset_all()
 
 
 @pytest.fixture()

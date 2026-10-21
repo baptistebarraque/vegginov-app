@@ -112,6 +112,16 @@ def test_patch_updates_notes_and_planned_for(client: TestClient, db_session: Ses
     assert response.json()["planned_for"] == "2026-08-09"
 
 
+def test_patch_rejects_oversized_notes(client: TestClient, db_session: Session) -> None:
+    _signup_and_login(client, db_session)
+    recipe = _add_recipe(db_session)
+    client.post(f"/watchlist/{recipe.id}")
+
+    response = client.patch(f"/watchlist/{recipe.id}", json={"notes": "x" * 2001})
+
+    assert response.status_code == 422
+
+
 def test_patch_returns_404_when_not_watchlisted(client: TestClient, db_session: Session) -> None:
     _signup_and_login(client, db_session)
     recipe = _add_recipe(db_session)

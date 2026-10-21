@@ -1,11 +1,21 @@
 """Request/response models for the recipe APIs. Validation only, no logic."""
 
+from typing import Annotated
+
 from pydantic import BaseModel, Field
+
+# Size caps on the public, unauthenticated query: far above any real recipe,
+# low enough that a single request can't make the matching do unbounded work.
+MAX_QUERY_TITLE_LENGTH = 200
+MAX_QUERY_INGREDIENTS = 60
+MAX_QUERY_INGREDIENT_LENGTH = 200
 
 
 class SuggestionRequest(BaseModel):
-    title: str
-    ingredients: list[str] = Field(default_factory=list)
+    title: str = Field(max_length=MAX_QUERY_TITLE_LENGTH)
+    ingredients: list[Annotated[str, Field(max_length=MAX_QUERY_INGREDIENT_LENGTH)]] = Field(
+        default_factory=list, max_length=MAX_QUERY_INGREDIENTS
+    )
     # When a session cookie is present, allergen exclusion from the user's
     # preferences is applied by default; set true to see everything anyway.
     ignore_preferences: bool = False

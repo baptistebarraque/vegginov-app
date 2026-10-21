@@ -10,6 +10,7 @@ from veggie_app.services import (
     auth_service,
     like_service,
     preference_service,
+    rate_limit_service,
     recipe_service,
     watchlist_service,
 )
@@ -17,7 +18,13 @@ from veggie_app.services import (
 router = APIRouter()
 
 
-@router.post("/suggestions", response_model=SuggestionResponse)
+# Rate-limited: each call embeds the query and scores it against every
+# recipe — the most CPU-hungry endpoint, and it needs no login.
+@router.post(
+    "/suggestions",
+    response_model=SuggestionResponse,
+    dependencies=[Depends(rate_limit_service.limit(rate_limit_service.SUGGESTIONS_LIMITER))],
+)
 def post_suggestions(
     request: SuggestionRequest,
     db: Session = Depends(get_db),

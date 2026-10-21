@@ -1,9 +1,10 @@
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from veggie_app.matching.embeddings import EMBEDDING_DIM
 from veggie_app.models.recipe import Recipe
-from veggie_app.services import auth_service
+from veggie_app.services import auth_service, rate_limit_service
 
 
 def test_post_suggestions_returns_matching_recipes(client: TestClient, db_session: Session) -> None:
@@ -205,3 +206,32 @@ def test_post_suggestions_anonymous_ignores_allergens(
 
     assert response.status_code == 200
     assert len(response.json()["suggestions"]) == 1
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"title": "x" * 201},
+        {"title": "Curry", "ingredients": ["poulet"] * 61},
+        {"title": "Curry", "ingredients": ["x" * 201]},
+    ],
+)
+def test_post_suggestions_rejects_oversized_queries(
+    client: TestClient, payload: dict[str, object]
+) -> None:
+    response = client.post("/suggestions", json=payload)
+
+    assert response.status_code == 422
+
+
+def test_post_suggestions_is_rate_limited_per_client(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(rate_limit_service.SUGGESTIONS_LIMITER, "max_requests", 2)
+
+    statuses = [
+        client.post("/suggestions", json={"title": "Curry", "ingredients": []}).status_code
+        for _ in range(3)
+    ]
+
+    assert statuses == [200, 200, 429]

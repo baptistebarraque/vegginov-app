@@ -128,6 +128,7 @@ veggie-app/
 │       │   ├── preference_service.py
 │       │   ├── watchlist_service.py
 │       │   ├── like_service.py
+│       │   ├── rate_limit_service.py       # per-IP request limits (429), in memory
 │       │   └── user_admin_service.py         # account list/detail for the admin
 │       ├── api/routes/                 # thin routes only
 │       │   ├── suggestions.py          # POST /suggestions (optional auth)

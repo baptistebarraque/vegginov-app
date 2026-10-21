@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from veggie_app.config import settings
-from veggie_app.services import auth_service
+from veggie_app.services import auth_service, rate_limit_service
 
 
 def test_login_succeeds_and_sets_cookie(client: TestClient, db_session: Session) -> None:
@@ -347,3 +347,24 @@ def test_delete_account_removes_session(client: TestClient, db_session: Session)
 
     assert response.status_code == 200
     assert me_response.status_code == 401
+
+
+def test_login_is_rate_limited_per_client(client: TestClient) -> None:
+    attempts = [
+        client.post("/auth/login", json={"email": "x@example.com", "password": "guess"})
+        for _ in range(rate_limit_service.LOGIN_LIMITER.max_requests + 1)
+    ]
+
+    assert {response.status_code for response in attempts[:-1]} == {401}
+    assert attempts[-1].status_code == 429
+    assert attempts[-1].json()["detail"] == rate_limit_service.TOO_MANY_REQUESTS_MESSAGE
+    assert "retry-after" in attempts[-1].headers
+
+
+def test_password_reset_request_is_rate_limited(client: TestClient) -> None:
+    statuses = [
+        client.post("/auth/password-reset/request", json={"email": "x@example.com"}).status_code
+        for _ in range(rate_limit_service.PASSWORD_RESET_LIMITER.max_requests + 1)
+    ]
+
+    assert statuses[-1] == 429
