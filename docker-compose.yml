@@ -13,7 +13,11 @@ services:
       # run locally with `uv run`, tests, psql) but not from the network.
       # Docker's published ports bypass host firewalls such as ufw, so the
       # bind address is what actually keeps the database off the internet.
+      # The [::1] line is the IPv6 loopback, also local-only: without it,
+      # "localhost" (tried as ::1 first on Windows) hangs for minutes on
+      # every new connection instead of falling back to 127.0.0.1.
       - "${POSTGRES_BIND_ADDRESS:-127.0.0.1}:${POSTGRES_PORT}:5432"
+      - "[::1]:${POSTGRES_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -33,6 +37,7 @@ services:
       # Loopback only by default: in production the HTTPS reverse proxy on
       # the same host is the only thing that should reach the API directly.
       - "${BACKEND_BIND_ADDRESS:-127.0.0.1}:${BACKEND_PORT}:8000"
+      - "[::1]:${BACKEND_PORT}:8000"
     volumes:
       # Bind mount (not a named volume) so recipe images are visible in the
       # same place whether they're saved by this container or by the CLI

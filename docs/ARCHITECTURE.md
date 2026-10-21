@@ -951,6 +951,11 @@ Decision:
   Postgres port mapping outright would break running the backend and tests
   outside Docker. Docker-published ports bypass host firewalls like `ufw`,
   so the bind address, not the firewall, is what keeps them private.
+  Each port is published on **both loopbacks**, `127.0.0.1` and `[::1]`:
+  with IPv4 only, `localhost` (resolved to `::1` first on Windows) hung for
+  minutes on every new connection before falling back — the backend test
+  suite went from ~3 to ~10+ minutes. (A Linux host with IPv6 disabled at
+  the kernel level would refuse the `[::1]` mapping; drop that line there.)
 - Changing `POSTGRES_PASSWORD` only takes effect when the data volume is
   first created; an existing database also needs `ALTER USER`.
 Alternatives considered: separate flags per behaviour (`COOKIE_SECURE`,
