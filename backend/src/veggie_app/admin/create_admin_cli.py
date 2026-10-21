@@ -21,17 +21,19 @@ logger.addHandler(_handler)
 
 def _prompt_email() -> str:
     while True:
-        email = input("Email de l'admin : ").strip()
-        if email:
-            return email
-        logger.warning("L'email ne peut pas être vide.")
+        try:
+            return auth_service.normalize_email(input("Email de l'admin : "))
+        except auth_service.InvalidEmailError as exc:
+            logger.warning(str(exc))
 
 
 def _prompt_password() -> str:
     while True:
         password = getpass.getpass("Mot de passe : ")
-        if not password:
-            logger.warning("Le mot de passe ne peut pas être vide.")
+        try:
+            auth_service.validate_new_password(password)
+        except auth_service.InvalidPasswordError as exc:
+            logger.warning(str(exc))
             continue
         confirmation = getpass.getpass("Confirmer le mot de passe : ")
         if password != confirmation:

@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
-import { login } from "../api/auth";
+import { describeAuthError, login } from "../api/auth";
 import { AuthCard } from "../components/AuthCard";
 import { Button } from "../components/ui/Button";
 import { FieldError } from "../components/ui/FieldError";
@@ -23,11 +23,9 @@ function AdminLoginPage() {
       await login(email, password);
       navigate("/admin");
     } catch (err) {
-      if (err instanceof Error && err.message.includes("401")) {
-        setError("Identifiants invalides.");
-      } else {
-        setError("Impossible de contacter le serveur. Vérifiez votre connexion.");
-      }
+      setError(
+        describeAuthError(err, "Impossible de contacter le serveur. Vérifiez votre connexion."),
+      );
       // The card shakes once on failure; the identifier is never cleared (§6.3).
       setShakeTrigger((current) => current + 1);
     } finally {

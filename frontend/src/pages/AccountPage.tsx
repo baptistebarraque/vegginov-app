@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
-import { deleteAccount, logout, updateAccount } from "../api/auth";
+import { deleteAccount, describeAuthError, logout, updateAccount } from "../api/auth";
 import { AppShell } from "../components/AppShell";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { Header } from "../components/Header";
@@ -15,6 +15,7 @@ function AccountPage() {
   const { user, isChecking } = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
@@ -29,7 +30,9 @@ function AccountPage() {
     setSaveError(null);
     setSaveSuccessMessage(null);
     try {
-      const updates: { email?: string; password?: string } = {};
+      const updates: { currentPassword: string; email?: string; password?: string } = {
+        currentPassword,
+      };
       if (email.trim() !== "") {
         updates.email = email.trim();
       }
@@ -39,13 +42,10 @@ function AccountPage() {
       await updateAccount(updates);
       setEmail("");
       setPassword("");
+      setCurrentPassword("");
       setSaveSuccessMessage("Compte mis à jour.");
     } catch (err) {
-      if (err instanceof Error && err.message.includes("409")) {
-        setSaveError("Cet email est déjà utilisé.");
-      } else {
-        setSaveError("Impossible de mettre à jour le compte.");
-      }
+      setSaveError(describeAuthError(err, "Impossible de mettre à jour le compte."));
     } finally {
       setIsSaving(false);
     }
@@ -127,8 +127,21 @@ function AccountPage() {
               type="password"
               autoComplete="new-password"
               placeholder="Laisser vide pour ne pas changer"
+              minLength={10}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="account-current-password">Mot de passe actuel</Label>
+            <Input
+              id="account-current-password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="Requis pour toute modification"
+              value={currentPassword}
+              onChange={(event) => setCurrentPassword(event.target.value)}
+              required
             />
           </div>
 

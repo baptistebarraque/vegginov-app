@@ -9,9 +9,9 @@ from veggie_app.services import auth_service
 def _signup_and_login(
     client: TestClient, db_session: Session, email: str = "person@example.com"
 ) -> None:
-    auth_service.register_user(db_session, email, "password")
+    auth_service.register_user(db_session, email, "password123")
     db_session.flush()
-    client.post("/auth/login", json={"email": email, "password": "password"})
+    client.post("/auth/login", json={"email": email, "password": "password123"})
 
 
 def _add_recipe(db_session: Session, title: str = "Curry de lentilles") -> Recipe:

@@ -11,13 +11,42 @@ function toUser(body: UserResponseBody): User {
   return { email: body.email, isAdmin: body.is_admin };
 }
 
-async function extractErrorMessage(response: Response, fallback: string): Promise<string> {
-  try {
-    const body = (await response.json()) as { detail?: string };
-    return body.detail ?? fallback;
-  } catch {
-    return fallback;
+/** A non-2xx API response. `serverMessage` is the backend's `detail` when it
+ * sent a plain string — always French, safe to show as-is. */
+export class ApiError extends Error {
+  readonly status: number;
+  readonly serverMessage: string | null;
+
+  constructor(status: number, serverMessage: string | null, fallback: string) {
+    super(serverMessage ?? fallback);
+    this.name = "ApiError";
+    this.status = status;
+    this.serverMessage = serverMessage;
   }
+}
+
+async function toApiError(response: Response, fallback: string): Promise<ApiError> {
+  let serverMessage: string | null = null;
+  try {
+    const body = (await response.json()) as { detail?: unknown };
+    // 422 validation errors carry a list, not a sentence: not shown as-is.
+    if (typeof body.detail === "string") {
+      serverMessage = body.detail;
+    }
+  } catch {
+    // No JSON body: fall back to the generic message.
+  }
+  return new ApiError(response.status, serverMessage, fallback);
+}
+
+/** What to show the user for a failed auth call: the server's own French
+ * message when there is one (wrong password, too many attempts, password
+ * too short...), else `fallback` (network down, server error). */
+export function describeAuthError(err: unknown, fallback: string): string {
+  if (err instanceof ApiError && err.serverMessage) {
+    return err.serverMessage;
+  }
+  return fallback;
 }
 
 export async function login(email: string, password: string): Promise<User> {
@@ -29,7 +58,7 @@ export async function login(email: string, password: string): Promise<User> {
   });
 
   if (!response.ok) {
-    throw new Error(await extractErrorMessage(response, `Login request failed: ${response.status}`));
+    throw await toApiError(response, `Login request failed: ${response.status}`);
   }
 
   return toUser((await response.json()) as UserResponseBody);
@@ -44,7 +73,7 @@ export async function signup(email: string, password: string): Promise<User> {
   });
 
   if (!response.ok) {
-    throw new Error(await extractErrorMessage(response, `Signup request failed: ${response.status}`));
+    throw await toApiError(response, `Signup request failed: ${response.status}`);
   }
 
   return toUser((await response.json()) as UserResponseBody);
@@ -80,7 +109,7 @@ export async function requestPasswordReset(email: string): Promise<void> {
   });
 
   if (!response.ok) {
-    throw new Error(await extractErrorMessage(response, `Request failed: ${response.status}`));
+    throw await toApiError(response, `Request failed: ${response.status}`);
   }
 }
 
@@ -92,22 +121,28 @@ export async function confirmPasswordReset(token: string, newPassword: string): 
   });
 
   if (!response.ok) {
-    throw new Error(await extractErrorMessage(response, `Request failed: ${response.status}`));
+    throw await toApiError(response, `Request failed: ${response.status}`);
   }
 }
 
-export async function updateAccount(
-  updates: { email?: string; password?: string }
-): Promise<User> {
+export async function updateAccount(updates: {
+  currentPassword: string;
+  email?: string;
+  password?: string;
+}): Promise<User> {
   const response = await fetch(`${API_BASE_URL}/auth/account`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify(updates),
+    body: JSON.stringify({
+      current_password: updates.currentPassword,
+      email: updates.email,
+      password: updates.password,
+    }),
   });
 
   if (!response.ok) {
-    throw new Error(await extractErrorMessage(response, `Request failed: ${response.status}`));
+    throw await toApiError(response, `Request failed: ${response.status}`);
   }
 
   return toUser((await response.json()) as UserResponseBody);
@@ -120,6 +155,6 @@ export async function deleteAccount(): Promise<void> {
   });
 
   if (!response.ok) {
-    throw new Error(await extractErrorMessage(response, `Request failed: ${response.status}`));
+    throw await toApiError(response, `Request failed: ${response.status}`);
   }
 }

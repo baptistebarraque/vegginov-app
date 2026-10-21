@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
-import { signup } from "../api/auth";
+import { describeAuthError, signup } from "../api/auth";
 import { AuthCard } from "../components/AuthCard";
 import { Button } from "../components/ui/Button";
 import { FieldError } from "../components/ui/FieldError";
@@ -29,11 +29,7 @@ function SignupPage() {
       await signup(email, password);
       navigate("/onboarding");
     } catch (err) {
-      if (err instanceof Error && err.message.includes("409")) {
-        setError("Cet email est déjà utilisé.");
-      } else {
-        setError("Impossible de créer le compte. Vérifiez votre connexion.");
-      }
+      setError(describeAuthError(err, "Impossible de créer le compte. Vérifiez votre connexion."));
       setShakeTrigger((current) => current + 1);
     } finally {
       setIsLoading(false);
@@ -60,6 +56,7 @@ function SignupPage() {
             id="signup-password"
             type="password"
             autoComplete="new-password"
+            minLength={10}
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             required
@@ -71,6 +68,7 @@ function SignupPage() {
             id="signup-confirm-password"
             type="password"
             autoComplete="new-password"
+            minLength={10}
             value={confirmPassword}
             onChange={(event) => setConfirmPassword(event.target.value)}
             required

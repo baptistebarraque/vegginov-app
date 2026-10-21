@@ -63,9 +63,9 @@ def test_post_suggestions_excludes_recipe_matching_logged_in_users_allergen(
         )
     )
     db_session.flush()
-    auth_service.register_user(db_session, "person@example.com", "password")
+    auth_service.register_user(db_session, "person@example.com", "password123")
     db_session.flush()
-    client.post("/auth/login", json={"email": "person@example.com", "password": "password"})
+    client.post("/auth/login", json={"email": "person@example.com", "password": "password123"})
     client.put(
         "/preferences",
         json={
@@ -94,9 +94,9 @@ def test_post_suggestions_ignore_preferences_includes_the_recipe_back(
         )
     )
     db_session.flush()
-    auth_service.register_user(db_session, "person@example.com", "password")
+    auth_service.register_user(db_session, "person@example.com", "password123")
     db_session.flush()
-    client.post("/auth/login", json={"email": "person@example.com", "password": "password"})
+    client.post("/auth/login", json={"email": "person@example.com", "password": "password123"})
     client.put(
         "/preferences",
         json={
@@ -127,9 +127,9 @@ def test_post_suggestions_marks_watchlisted_recipe_for_logged_in_user(
     )
     db_session.add(recipe)
     db_session.flush()
-    auth_service.register_user(db_session, "person@example.com", "password")
+    auth_service.register_user(db_session, "person@example.com", "password123")
     db_session.flush()
-    client.post("/auth/login", json={"email": "person@example.com", "password": "password"})
+    client.post("/auth/login", json={"email": "person@example.com", "password": "password123"})
     client.post(f"/watchlist/{recipe.id}")
 
     response = client.post("/suggestions", json={"title": "Curry de poulet", "ingredients": []})
@@ -149,9 +149,9 @@ def test_post_suggestions_marks_liked_recipe_and_counts_for_logged_in_user(
     )
     db_session.add(recipe)
     db_session.flush()
-    auth_service.register_user(db_session, "person@example.com", "password")
+    auth_service.register_user(db_session, "person@example.com", "password123")
     db_session.flush()
-    client.post("/auth/login", json={"email": "person@example.com", "password": "password"})
+    client.post("/auth/login", json={"email": "person@example.com", "password": "password123"})
     client.post(f"/likes/{recipe.id}")
 
     response = client.post("/suggestions", json={"title": "Curry de poulet", "ingredients": []})
@@ -173,9 +173,9 @@ def test_post_suggestions_shows_public_like_count_to_anonymous(
     db_session.add(recipe)
     db_session.flush()
     # A logged-in user likes the recipe, then logs out.
-    auth_service.register_user(db_session, "person@example.com", "password")
+    auth_service.register_user(db_session, "person@example.com", "password123")
     db_session.flush()
-    client.post("/auth/login", json={"email": "person@example.com", "password": "password"})
+    client.post("/auth/login", json={"email": "person@example.com", "password": "password123"})
     client.post(f"/likes/{recipe.id}")
     client.post("/auth/logout")
 

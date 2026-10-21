@@ -8,7 +8,7 @@ from veggie_app.services import auth_service, watchlist_service
 
 
 def _make_user_and_recipe(db_session: Session):
-    user = auth_service.register_user(db_session, "person@example.com", "password")
+    user = auth_service.register_user(db_session, "person@example.com", "password123")
     recipe = Recipe(
         title="Curry de lentilles", ingredients=[], allergens=[], embedding=[0.1] * EMBEDDING_DIM
     )
@@ -81,7 +81,7 @@ def test_update_entry_returns_none_when_not_watchlisted(db_session: Session) -> 
 
 
 def test_list_for_user_orders_most_recent_first(db_session: Session) -> None:
-    user = auth_service.register_user(db_session, "person@example.com", "password")
+    user = auth_service.register_user(db_session, "person@example.com", "password123")
     first = Recipe(title="Premier", ingredients=[], allergens=[], embedding=[0.1] * EMBEDDING_DIM)
     second = Recipe(title="Second", ingredients=[], allergens=[], embedding=[0.1] * EMBEDDING_DIM)
     db_session.add_all([first, second])
@@ -95,8 +95,8 @@ def test_list_for_user_orders_most_recent_first(db_session: Session) -> None:
 
 
 def test_watchlisted_recipe_ids_returns_only_this_users_entries(db_session: Session) -> None:
-    user_a = auth_service.register_user(db_session, "a@example.com", "password")
-    user_b = auth_service.register_user(db_session, "b@example.com", "password")
+    user_a = auth_service.register_user(db_session, "a@example.com", "password123")
+    user_b = auth_service.register_user(db_session, "b@example.com", "password123")
     recipe = Recipe(title="Curry", ingredients=[], allergens=[], embedding=[0.1] * EMBEDDING_DIM)
     db_session.add(recipe)
     db_session.flush()

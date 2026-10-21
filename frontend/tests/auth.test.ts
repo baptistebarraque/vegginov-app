@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  ApiError,
   confirmPasswordReset,
+  describeAuthError,
   deleteAccount,
   getCurrentUser,
   login,
@@ -228,17 +230,62 @@ describe("updateAccount", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await updateAccount({ email: "new@example.com" });
+    const result = await updateAccount({
+      currentPassword: "old password",
+      email: "new@example.com",
+    });
 
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringMatching(/\/auth\/account$/),
       expect.objectContaining({
         method: "PATCH",
         credentials: "include",
-        body: JSON.stringify({ email: "new@example.com" }),
+        body: JSON.stringify({ current_password: "old password", email: "new@example.com" }),
       }),
     );
     expect(result).toEqual({ email: "new@example.com", isAdmin: false });
+  });
+});
+
+describe("ApiError / describeAuthError", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("carries the status and the server's French message", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: () => Promise.resolve({ detail: "Identifiants invalides" }),
+      }),
+    );
+
+    const error = await login("person@example.com", "wrong").catch((err: unknown) => err);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).status).toBe(401);
+    expect(describeAuthError(error, "fallback")).toBe("Identifiants invalides");
+  });
+
+  it("ignores non-string details such as 422 validation lists", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 422,
+        json: () => Promise.resolve({ detail: [{ msg: "Field required" }] }),
+      }),
+    );
+
+    const error = await login("person@example.com", "x").catch((err: unknown) => err);
+
+    expect(describeAuthError(error, "fallback")).toBe("fallback");
+  });
+
+  it("falls back for network failures", () => {
+    expect(describeAuthError(new TypeError("Failed to fetch"), "fallback")).toBe("fallback");
   });
 });
 

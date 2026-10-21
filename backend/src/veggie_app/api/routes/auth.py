@@ -6,7 +6,6 @@ an HTTP concern, not business logic.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from veggie_app.config import settings
@@ -22,7 +21,12 @@ from veggie_app.schemas.auth import (
     UserResponse,
 )
 from veggie_app.services import auth_service
-from veggie_app.services.auth_service import EmailAlreadyRegisteredError
+from veggie_app.services.auth_service import (
+    EmailAlreadyRegisteredError,
+    InvalidEmailError,
+    InvalidPasswordError,
+    WrongCurrentPasswordError,
+)
 
 router = APIRouter(prefix="/auth")
 
@@ -59,6 +63,8 @@ def signup(
         user = auth_service.register_user(db, request.email, request.password, is_admin=False)
     except EmailAlreadyRegisteredError as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, "Cet email est déjà utilisé") from exc
+    except (InvalidEmailError, InvalidPasswordError) as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
 
     token = auth_service.create_session(db, user)
     db.commit()
@@ -104,7 +110,7 @@ def request_password_reset(
     # Same response whether or not the email exists, so this endpoint can't
     # be used to enumerate registered accounts — and the token itself is
     # never in the response, only delivered out of band to the owner.
-    user = db.execute(select(User).where(User.email == request.email)).scalar_one_or_none()
+    user = auth_service.find_user_by_email(db, request.email)
     if user is not None:
         token = auth_service.create_reset_token(db, user)
         db.commit()
@@ -116,7 +122,10 @@ def request_password_reset(
 def confirm_password_reset(
     request: ConfirmPasswordResetRequest, db: Session = Depends(get_db)
 ) -> StatusResponse:
-    user = auth_service.consume_reset_token(db, request.token, request.new_password)
+    try:
+        user = auth_service.consume_reset_token(db, request.token, request.new_password)
+    except InvalidPasswordError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
     if user is None:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, "Lien de réinitialisation invalide ou expiré"
@@ -128,15 +137,27 @@ def confirm_password_reset(
 @router.patch("/account", response_model=UserResponse)
 def update_account(
     request: UpdateAccountRequest,
+    http_request: Request,
     user: User = Depends(auth_service.require_user),
     db: Session = Depends(get_db),
 ) -> UserResponse:
     try:
         user = auth_service.update_account(
-            db, user, email=request.email, password=request.password
+            db,
+            user,
+            current_password=request.current_password,
+            email=request.email,
+            password=request.password,
+            current_raw_token=http_request.cookies.get(auth_service.SESSION_COOKIE_NAME),
         )
+    except WrongCurrentPasswordError as exc:
+        # 400, not 401: the session is fine, only the confirmation failed —
+        # a 401 would make the frontend treat the user as logged out.
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Mot de passe actuel incorrect.") from exc
     except EmailAlreadyRegisteredError as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, "Cet email est déjà utilisé") from exc
+    except (InvalidEmailError, InvalidPasswordError) as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
     db.commit()
     return UserResponse(email=user.email, is_admin=user.is_admin)
 

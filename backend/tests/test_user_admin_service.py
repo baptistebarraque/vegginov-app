@@ -13,7 +13,7 @@ from veggie_app.services import (
 
 
 def _add_user(db_session: Session, email: str, *, is_admin: bool = False) -> User:
-    user = auth_service.register_user(db_session, email, "password", is_admin=is_admin)
+    user = auth_service.register_user(db_session, email, "password123", is_admin=is_admin)
     db_session.flush()
     return user
 

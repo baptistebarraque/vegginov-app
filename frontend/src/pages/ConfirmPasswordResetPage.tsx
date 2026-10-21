@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
-import { confirmPasswordReset } from "../api/auth";
+import { confirmPasswordReset, describeAuthError } from "../api/auth";
 import { AuthCard } from "../components/AuthCard";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
@@ -32,11 +32,9 @@ function ConfirmPasswordResetPage() {
       await confirmPasswordReset(token, newPassword);
       setIsDone(true);
     } catch (err) {
-      if (err instanceof Error && err.message.includes("400")) {
-        setError("Lien de réinitialisation invalide ou expiré.");
-      } else {
-        setError("Impossible de contacter le serveur. Vérifiez votre connexion.");
-      }
+      setError(
+        describeAuthError(err, "Impossible de contacter le serveur. Vérifiez votre connexion."),
+      );
       setShakeTrigger((current) => current + 1);
     } finally {
       setIsLoading(false);
@@ -66,6 +64,7 @@ function ConfirmPasswordResetPage() {
               id="new-password"
               type="password"
               autoComplete="new-password"
+              minLength={10}
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
               required
@@ -77,6 +76,7 @@ function ConfirmPasswordResetPage() {
               id="confirm-new-password"
               type="password"
               autoComplete="new-password"
+              minLength={10}
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
               required

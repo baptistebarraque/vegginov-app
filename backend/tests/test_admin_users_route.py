@@ -24,14 +24,14 @@ def _login_as_admin(client: TestClient, db_session: Session) -> User:
 
 
 def _login_as_user(client: TestClient, db_session: Session) -> User:
-    user = auth_service.register_user(db_session, "person@example.com", "password")
+    user = auth_service.register_user(db_session, "person@example.com", "password123")
     db_session.flush()
-    client.post("/auth/login", json={"email": "person@example.com", "password": "password"})
+    client.post("/auth/login", json={"email": "person@example.com", "password": "password123"})
     return user
 
 
 def _add_user(db_session: Session, email: str) -> User:
-    user = auth_service.register_user(db_session, email, "password")
+    user = auth_service.register_user(db_session, email, "password123")
     db_session.flush()
     return user
 

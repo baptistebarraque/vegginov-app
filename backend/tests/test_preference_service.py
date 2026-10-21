@@ -10,7 +10,7 @@ from veggie_app.services.preference_service import (
 
 
 def _make_user(db_session: Session):
-    return auth_service.register_user(db_session, "person@example.com", "password")
+    return auth_service.register_user(db_session, "person@example.com", "password123")
 
 
 def test_get_preferences_returns_none_before_any_upsert(db_session: Session) -> None:

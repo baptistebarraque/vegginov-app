@@ -111,6 +111,55 @@ def test_signup_creates_non_admin_user_and_logs_in(client: TestClient) -> None:
     assert auth_service.SESSION_COOKIE_NAME in response.cookies
 
 
+def test_signup_normalizes_email_case(client: TestClient) -> None:
+    client.post(
+        "/auth/signup", json={"email": " Person@Example.COM ", "password": "correct horse battery"}
+    )
+
+    duplicate = client.post(
+        "/auth/signup", json={"email": "person@example.com", "password": "another password"}
+    )
+    login = client.post(
+        "/auth/login", json={"email": "PERSON@example.com", "password": "correct horse battery"}
+    )
+
+    assert duplicate.status_code == 409
+    assert login.status_code == 200
+    assert login.json()["email"] == "person@example.com"
+
+
+def test_signup_rejects_short_password_with_a_french_message(client: TestClient) -> None:
+    response = client.post(
+        "/auth/signup", json={"email": "person@example.com", "password": "short"}
+    )
+
+    assert response.status_code == 400
+    assert "au moins 10 caractères" in response.json()["detail"]
+
+
+def test_signup_rejects_invalid_email(client: TestClient) -> None:
+    response = client.post(
+        "/auth/signup", json={"email": "not-an-email", "password": "correct horse battery"}
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Adresse email invalide."
+
+
+def test_login_with_password_over_bcrypt_limit_is_a_clean_401(
+    client: TestClient, db_session: Session
+) -> None:
+    # bcrypt>=5 raises on >72 bytes: must be "wrong credentials", not a 500.
+    auth_service.register_user(db_session, "person@example.com", "correct horse battery")
+    db_session.flush()
+
+    response = client.post(
+        "/auth/login", json={"email": "person@example.com", "password": "x" * 100}
+    )
+
+    assert response.status_code == 401
+
+
 def test_signup_rejects_duplicate_email(client: TestClient, db_session: Session) -> None:
     auth_service.register_user(db_session, "person@example.com", "correct horse battery")
     db_session.flush()
@@ -239,25 +288,59 @@ def test_update_account_changes_password(client: TestClient, db_session: Session
     db_session.flush()
     client.post("/auth/login", json={"email": "person@example.com", "password": "old password"})
 
-    response = client.patch("/auth/account", json={"password": "new password"})
+    response = client.patch(
+        "/auth/account", json={"current_password": "old password", "password": "new password"}
+    )
 
     assert response.status_code == 200
+    # The session that made the change stays logged in.
+    assert client.get("/auth/me").status_code == 200
     login_response = client.post(
         "/auth/login", json={"email": "person@example.com", "password": "new password"}
     )
     assert login_response.status_code == 200
 
 
-def test_update_account_requires_session(client: TestClient) -> None:
+def test_update_account_rejects_wrong_current_password(
+    client: TestClient, db_session: Session
+) -> None:
+    auth_service.register_user(db_session, "person@example.com", "old password")
+    db_session.flush()
+    client.post("/auth/login", json={"email": "person@example.com", "password": "old password"})
+
+    response = client.patch(
+        "/auth/account", json={"current_password": "not my password", "email": "evil@example.com"}
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Mot de passe actuel incorrect."
+    assert client.get("/auth/me").json()["email"] == "person@example.com"
+
+
+def test_update_account_requires_current_password_field(
+    client: TestClient, db_session: Session
+) -> None:
+    auth_service.register_user(db_session, "person@example.com", "old password")
+    db_session.flush()
+    client.post("/auth/login", json={"email": "person@example.com", "password": "old password"})
+
     response = client.patch("/auth/account", json={"password": "new password"})
+
+    assert response.status_code == 422
+
+
+def test_update_account_requires_session(client: TestClient) -> None:
+    response = client.patch(
+        "/auth/account", json={"current_password": "old password", "password": "new password"}
+    )
 
     assert response.status_code == 401
 
 
 def test_delete_account_removes_session(client: TestClient, db_session: Session) -> None:
-    auth_service.register_user(db_session, "person@example.com", "password")
+    auth_service.register_user(db_session, "person@example.com", "password123")
     db_session.flush()
-    client.post("/auth/login", json={"email": "person@example.com", "password": "password"})
+    client.post("/auth/login", json={"email": "person@example.com", "password": "password123"})
 
     response = client.delete("/auth/account")
     me_response = client.get("/auth/me")

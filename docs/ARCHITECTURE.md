@@ -1007,3 +1007,43 @@ job to maintain for the same result); serving the frontend from FastAPI
 (rejected — mixes concerns and still needs something for TLS); API on a
 subdomain (rejected — reintroduces CORS for no benefit at this size).
 
+---
+
+## Account security: password policy, normalized emails, re-auth, revocation
+
+Date: 2026-10-21
+Context: the security review found that a stolen session cookie was
+enough to change an account's email and password (locking the owner out
+for good), that a password change or reset left every other session
+alive, that `a` was an acceptable password, and that `Foo@x.com` and
+`foo@x.com` were two different accounts.
+Decision (all in `auth_service`, so the API, the admin CLI and any future
+entry point get the same rules):
+- **Password policy** (`validate_new_password`): at least 10 characters,
+  at most 72 UTF-8 bytes — bcrypt's own ceiling (bcrypt>=5 raises beyond
+  it, which used to be a 500 on signup). Applied when a password is *set*
+  (signup, change, reset), never at login, so older accounts still sign in.
+  `_password_matches` treats >72 bytes as a plain mismatch (clean 401).
+- **Emails are normalized** (`normalize_email`: trimmed, lowercased, a
+  loose `x@y.tld` shape check) on every write and lookup. No migration: the
+  dev DB had no mixed-case address and production starts empty.
+- **Changing email or password needs the current password**
+  (`current_password` in `PATCH /auth/account`, 400 "Mot de passe actuel
+  incorrect." — not 401, which the frontend reads as "logged out").
+- **Revocation**: a password change logs out every *other* session; a
+  reset logs out all of them and voids the account's other reset tokens. A
+  rejected new password raises before the reset token is consumed.
+- Business rules raise exceptions with French messages; routes map them to
+  400 and the frontend shows the server's message as-is via `ApiError` /
+  `describeAuthError`. That also fixed a latent bug: the auth pages looked
+  for "401"/"409" inside error messages that actually carried the server's
+  French text, so a wrong password read "Impossible de contacter le
+  serveur".
+- Schemas cap field sizes (email 320, password 256) only to bound payloads.
+Alternatives considered: Pydantic `EmailStr` (rejected — needs the extra
+`email-validator` dependency for a check that can only ever be loose; the
+real proof is a delivered email); Pydantic `min_length` on passwords
+(rejected — returns 422 lists the frontend can't show in French, and would
+not cover the CLI); requiring the password for account *deletion* too (not
+done yet — would need a password field in the confirm dialog).
+
