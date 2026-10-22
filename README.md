@@ -19,10 +19,7 @@ User-facing UI text is currently in French.
 
 ## Current status
 
-**Phase 1 — POC.** User submits a recipe, the app returns 4 similar
-vegetarian recipes (the similarity is yet to define). An admin can add
-vegetarian recipes via a CLI script, or by logging into the admin web
-interface.
+**Phase 4 — POC.** Optional users account, favorite recipes, "to do list".
 
 ---
 
